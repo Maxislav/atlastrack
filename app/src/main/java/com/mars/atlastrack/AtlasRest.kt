@@ -21,7 +21,7 @@ class AtlasRest : Callback<ResponseBody> {
     var location: Location
     lateinit var callbackLocation: com.mars.atlastrack.Callback
 
-    constructor(location: Location) {
+    constructor(location: Location, batLevel: Number) {
         this.location = location
         val retrofit = Retrofit.Builder()
             .baseUrl(BuildConfig.SERVER_BASE_PATH) // .addConverterFactory(GsonConverterFactory.create())
@@ -29,12 +29,12 @@ class AtlasRest : Callback<ResponseBody> {
         val service = retrofit.create(WebService::class.java)
         var gprmc = createGprmc()
         Log.d(TAG, gprmc)
-        onLog = service.log(BuildConfig.DEVICE_ID, gprmc)
+        onLog = service.log(BuildConfig.DEVICE_ID, gprmc, batLevel)
     }
 
     interface WebService {
         @GET("/log")
-        open fun log(@Query("id") id: String, @Query("gprmc") gprmc: String): Call<ResponseBody>
+        open fun log(@Query("id") id: String, @Query("gprmc") gprmc: String, @Query("batt") batt: Number): Call<ResponseBody>
     }
 
     private fun createGprmc(): String {

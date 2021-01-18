@@ -6,8 +6,10 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
@@ -19,13 +21,14 @@ import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Observer
 import androidx.work.*
+import kotlin.properties.Delegates
 
 
 class LocationService : Service(), Callback {
     private val TAG = "LocationService"
     private val localBinder = LocalBinder()
-    lateinit var locationManagerNet: LocationManager
-    lateinit var locationManagerGps: LocationManager
+    var locationManagerNet: LocationManager? = null
+    var locationManagerGps: LocationManager? = null
     lateinit var locationListenerNet: MyLocationListener
     lateinit var atlasRest: AtlasRest
     lateinit var networkListener: NetworkListener
@@ -33,36 +36,37 @@ class LocationService : Service(), Callback {
     var gpsDefined = false
     var time: Long = 0
     var notificationId = 0
-    lateinit var wakeLock: PowerManager.WakeLock
+    var wakeLock: PowerManager.WakeLock? = null
+    private lateinit var batLevel: Number
+    lateinit var batteryReceiver: BatteryReceiver
 
     @SuppressLint("InvalidWakeLockTag")
     override fun onCreate() {
         Log.d(TAG, "onCreate()")
         time = System.currentTimeMillis()
-        // notificationStart("service created")
         onTimeout()
-        timeoutForNetLocation();
-
-        val c = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val connMgr = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-
 
         val powerManager = applicationContext.getSystemService(POWER_SERVICE) as PowerManager
-        wakeLock = powerManager.newWakeLock(
-            PowerManager.PARTIAL_WAKE_LOCK, // PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
-            "GCMOnMessage"
-        )
-        // PARTIAL_WAKE_LOCK
-        wakeLock?.acquire(10*60*1000L /*10 minutes*/)
 
 
-        /*val intent1 = createIntent("action 1", "extra 1")
-        val am = getSystemService(ALARM_SERVICE) as AlarmManager
-        val pendingIntent =   PendingIntent.getService(applicationContext, 1, intent1, PendingIntent.FLAG_CANCEL_CURRENT)
-        am.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 60000*2, pendingIntent)
-*/
+        if( (getSystemService(LOCATION_SERVICE) as LocationManager).isProviderEnabled(LocationManager.GPS_PROVIDER)){
+            wakeLock = powerManager.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK, // PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                "GCMOnMessage"
+            )
+            wakeLock?.acquire(10 * 60 * 1000L /*10 minutes*/)
+            batteryReceiver = BatteryReceiver()
+            registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        }
+
+
+    }
+
+    fun startLocationListeners() {
+        timeoutForNetLocation();
         locationManagerNet = getSystemService(LOCATION_SERVICE) as LocationManager
         locationManagerGps = getSystemService(LOCATION_SERVICE) as LocationManager
+
         if (ActivityCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
@@ -71,32 +75,19 @@ class LocationService : Service(), Callback {
                 Manifest.permission.ACCESS_COARSE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             stopSelf()
             return
         }
         networkListener = NetworkListener()
         gpsListener = GPSListener()
 
-        locationManagerGps.requestLocationUpdates(
+        locationManagerGps?.requestLocationUpdates(
             LocationManager.GPS_PROVIDER,
             10000,
             0F,
             gpsListener
-            /* LocationListener { location ->
-                 atlasRest = AtlasRest(location)
 
-                 atlasRest.request(this);
-             }*/
         )
-
-
     }
 
     override fun onBind(intent: Intent?): IBinder? {
@@ -116,12 +107,18 @@ class LocationService : Service(), Callback {
 
     override fun onDestroy() {
         Log.d(TAG, "onDestroy()")
-        locationManagerNet.removeUpdates(networkListener)
-        locationManagerGps.removeUpdates(gpsListener)
-        if(wakeLock?.isHeld){
-            wakeLock?.release()
+        if(locationManagerNet != null){
+
+            locationManagerNet?.removeUpdates(networkListener)
         }
 
+        locationManagerGps?.removeUpdates(gpsListener)
+
+
+        if (wakeLock != null && wakeLock!!.isHeld) {
+            wakeLock?.release()
+        }
+        super.onDestroy()
     }
 
 
@@ -183,7 +180,7 @@ class LocationService : Service(), Callback {
         override fun onLocationChanged(location: Location) {
             val t2 = System.currentTimeMillis()
             if (!gpsDefined) {
-             //   notificationStart("net ${location.longitude} ${location.latitude}")
+                //   notificationStart("net ${location.longitude} ${location.latitude}")
                 sendWithWorker(location, NETWORK)
             } else if (time + 60 * 1000 * 2 < t2) {
                 // notificationStart("net timeout")
@@ -194,24 +191,8 @@ class LocationService : Service(), Callback {
         override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
     }
 
-    private fun notificationStart(messagee: String) {
-        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        val intent1 = Intent(this, MainActivity::class.java)
-        intent1.putExtra("were_from", "my_service")
-        intent1.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
 
-        val pendingIntent = PendingIntent.getActivity(this, 0, intent1, PendingIntent.FLAG_ONE_SHOT)
-        val notification = Notification.Builder(this).setContentTitle("LocationService")
-            .setContentText("network ${isInternetAvailable(this)} | ${messagee}")
-            .setContentIntent(pendingIntent)
-            .setSmallIcon(R.drawable.ic_launch)
-            .build()
-        notification.flags = Notification.FLAG_SHOW_LIGHTS or Notification.FLAG_AUTO_CANCEL
-        COUNT++
-        nm.notify(COUNT, notification)
-    }
-
-    fun startNetListener(){
+    fun startNetListener() {
 
         if (ActivityCompat.checkSelfPermission(
                 this,
@@ -223,8 +204,8 @@ class LocationService : Service(), Callback {
         ) {
             return
         }
-       // notificationStart("startNetListener")
-        locationManagerNet.requestLocationUpdates(
+        // notificationStart("startNetListener")
+        locationManagerNet?.requestLocationUpdates(
             LocationManager.NETWORK_PROVIDER,
             5000,
             0F,
@@ -232,7 +213,7 @@ class LocationService : Service(), Callback {
         )
     }
 
-    private fun timeoutForNetLocation(){
+    private fun timeoutForNetLocation() {
         val h = object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
                 startNetListener()
@@ -263,7 +244,6 @@ class LocationService : Service(), Callback {
 
     fun sendWithWorker(location: Location, byLocation: String) {
         val data = Data.Builder()
-        // val m = mapOf<String, Double>("lng" to location.longitude, "lat" to location.latitude)
         data.putDouble("lng", location.longitude)
         data.putDouble("lat", location.latitude)
         val workManager = WorkManager.getInstance(this)
@@ -279,11 +259,20 @@ class LocationService : Service(), Callback {
             .observeForever(Observer { workInfo: WorkInfo? ->
 
                 if (workInfo != null && workInfo.state.isFinished) {
-                    val atlasRest = AtlasRest(location)
+                    val atlasRest = AtlasRest(location, batLevel)
                     atlasRest.request(this@LocationService)
                 }
             })
         workManager.enqueue(uploadTask)
+    }
+
+    inner class BatteryReceiver : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val level = intent!!.getIntExtra("level", 0)
+            batLevel = level
+            unregisterReceiver(batteryReceiver);
+            startLocationListeners()
+        }
     }
 
     companion object {
@@ -306,6 +295,23 @@ class LocationService : Service(), Callback {
         if (time + 30 * 1000 < t2) {
             stopSelf()
         }
+    }
+
+    private fun notificationStart(messagee: String) {
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val intent1 = Intent(this, MainActivity::class.java)
+        intent1.putExtra("were_from", "my_service")
+        intent1.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+
+        val pendingIntent = PendingIntent.getActivity(this, 0, intent1, PendingIntent.FLAG_ONE_SHOT)
+        val notification = Notification.Builder(this).setContentTitle("LocationService")
+            .setContentText("network ${isInternetAvailable(this)} | ${messagee}")
+            .setContentIntent(pendingIntent)
+            .setSmallIcon(R.drawable.ic_launch)
+            .build()
+        notification.flags = Notification.FLAG_SHOW_LIGHTS or Notification.FLAG_AUTO_CANCEL
+        COUNT++
+        nm.notify(COUNT, notification)
     }
 
 

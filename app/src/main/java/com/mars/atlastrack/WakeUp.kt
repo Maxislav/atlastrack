@@ -41,17 +41,17 @@ class WakeUp : BroadcastReceiver() {
         )
         // alarmManager?.cancel(pIntent2)
         val time = System.currentTimeMillis();
-       /* alarmManager?.set(
+        alarmManager?.set(
             AlarmManager.RTC_WAKEUP,
             time,
             pIntent2
-        )*/
-        alarmManager.setRepeating(
+        )
+      /*  alarmManager.setRepeating(
             AlarmManager.RTC_WAKEUP,
             time,
             60000*15 ,
             pIntent2
-        )
+        )*/
 
 
     }
