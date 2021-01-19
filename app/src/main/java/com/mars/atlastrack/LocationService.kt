@@ -2,10 +2,7 @@ package com.mars.atlastrack
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.Notification
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.app.Service
+import android.app.*
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -21,7 +18,6 @@ import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Observer
 import androidx.work.*
-import kotlin.properties.Delegates
 
 
 class LocationService : Service(), Callback {
@@ -39,20 +35,32 @@ class LocationService : Service(), Callback {
     var wakeLock: PowerManager.WakeLock? = null
     private lateinit var batLevel: Number
     lateinit var batteryReceiver: BatteryReceiver
+    lateinit var hh: Handler
 
-    @SuppressLint("InvalidWakeLockTag")
+
+    // @SuppressLint("InvalidWakeLockTag")
     override fun onCreate() {
         Log.d(TAG, "onCreate()")
+        setupNextAlarm();
         time = System.currentTimeMillis()
-        onTimeout()
 
+        hh = object : Handler(Looper.getMainLooper()) {
+            override fun handleMessage(msg: Message) {
+               this@LocationService.stopSelf()
+            }
+        }
+
+        onTimeout()
         val powerManager = applicationContext.getSystemService(POWER_SERVICE) as PowerManager
 
 
-        if( (getSystemService(LOCATION_SERVICE) as LocationManager).isProviderEnabled(LocationManager.GPS_PROVIDER)){
+        if ((getSystemService(LOCATION_SERVICE) as LocationManager).isProviderEnabled(
+                LocationManager.GPS_PROVIDER
+            )
+        ) {
             wakeLock = powerManager.newWakeLock(
                 PowerManager.PARTIAL_WAKE_LOCK, // PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
-                "GCMOnMessage"
+                "atlas.track:wakelock"
             )
             wakeLock?.acquire(10 * 60 * 1000L /*10 minutes*/)
             batteryReceiver = BatteryReceiver()
@@ -60,6 +68,11 @@ class LocationService : Service(), Callback {
         }
 
 
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
+        return START_STICKY
     }
 
     fun startLocationListeners() {
@@ -107,7 +120,8 @@ class LocationService : Service(), Callback {
 
     override fun onDestroy() {
         Log.d(TAG, "onDestroy()")
-        if(locationManagerNet != null){
+        hh.removeCallbacksAndMessages(null);
+        if (locationManagerNet != null) {
 
             locationManagerNet?.removeUpdates(networkListener)
         }
@@ -228,15 +242,15 @@ class LocationService : Service(), Callback {
 
 
     private fun onTimeout() {
-        val h = object : Handler(Looper.getMainLooper()) {
+       /* val h = object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
                 stopSelf()
             }
-        }
+        }*/
         val t = Thread {
 
             Thread.sleep(TWO_MINUTES)
-            h.sendEmptyMessage(1)
+            hh.sendEmptyMessage(1)
         }
         t.start()
     }
@@ -275,13 +289,7 @@ class LocationService : Service(), Callback {
         }
     }
 
-    companion object {
-        private var COUNT = 0
-        private var TWO_MINUTES = (60 * 1000 * 2).toLong()
-        private var TEN_SECONDS = (10 * 1000).toLong()
-        private var GPS = "GPS"
-        private var NETWORK = "NETWORK"
-    }
+
 
     override fun onSuccess() {
         val t2 = System.currentTimeMillis()
@@ -314,6 +322,47 @@ class LocationService : Service(), Callback {
         nm.notify(COUNT, notification)
     }
 
+    private fun setupNextAlarm(): Unit{
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager;
+        val alarmIntent = Intent(this, IntervalReceiver::class.java)
+        val time = System.currentTimeMillis() + TWENTY_MINUTES;
+        val pIntent2 = PendingIntent.getBroadcast(
+            this,
+            0,
+            alarmIntent,
+            PendingIntent.FLAG_CANCEL_CURRENT
+        )
 
+        if (isDozing(this)) {
+            alarmManager.setAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                time,
+                pIntent2)
+        } else {
+            alarmManager.set(
+                AlarmManager.RTC_WAKEUP,
+                time,
+                pIntent2
+            )
+        }
+
+    }
+    companion object {
+        private var COUNT = 0
+        private var TWO_MINUTES = (60 * 1000 * 2).toLong()
+        private var TEN_SECONDS = (10 * 1000).toLong()
+        private var TWENTY_MINUTES = 60*1000*20
+        private var GPS = "GPS"
+        private var NETWORK = "NETWORK"
+        fun isDozing(context: Context): Boolean {
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val powerManager = context.getSystemService(POWER_SERVICE) as PowerManager
+                powerManager.isDeviceIdleMode &&
+                        !powerManager.isIgnoringBatteryOptimizations(context.packageName)
+            } else {
+                false
+            }
+        }
+    }
 }
 
