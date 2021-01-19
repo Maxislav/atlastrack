@@ -247,7 +247,7 @@ class LocationService : Service(), Callback {
         data.putDouble("lng", location.longitude)
         data.putDouble("lat", location.latitude)
         val workManager = WorkManager.getInstance(this)
-
+        val atlasRest = AtlasRest(location, batLevel)
         val networkConstraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
@@ -259,7 +259,7 @@ class LocationService : Service(), Callback {
             .observeForever(Observer { workInfo: WorkInfo? ->
 
                 if (workInfo != null && workInfo.state.isFinished) {
-                    val atlasRest = AtlasRest(location, batLevel)
+
                     atlasRest.request(this@LocationService)
                 }
             })
