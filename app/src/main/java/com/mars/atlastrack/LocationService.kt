@@ -13,6 +13,10 @@ import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.*
+import android.telephony.CellIdentityLte
+import android.telephony.CellInfo
+import android.telephony.CellInfoLte
+import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Observer
@@ -22,29 +26,33 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 
-class LocationService : Service(), Callback {
+class LocationService : Service() {
     private val TAG = "LocationService"
     private val localBinder = LocalBinder()
-    var locationManagerNet: LocationManager? = null
-    var locationManagerGps: LocationManager? = null
+    private var locationManagerNet: LocationManager? = null
+    private var locationManagerGps: LocationManager? = null
     lateinit var locationListenerNet: MyLocationListener
     lateinit var atlasRest: AtlasRest
     lateinit var networkListener: NetworkListener
     lateinit var gpsListener: GPSListener
-    var gpsDefined = false
-    var startServicetime: Long = 0
+    private var gpsDefined = false
+    private var startServicetime: Long = 0
     var notificationId = 0
-    var wakeLock: PowerManager.WakeLock? = null
+    private var wakeLock: PowerManager.WakeLock? = null
     private lateinit var batLevel: Number
     private lateinit var batteryReceiver: BatteryReceiver
     private lateinit var emergencyHandler: Handler
     var timerForNetHandler: Handler? = null
 
 
-    // @SuppressLint("InvalidWakeLockTag")
     override fun onCreate() {
         Log.d(TAG, "onCreate")
 
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        setupNextAlarm()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -55,6 +63,7 @@ class LocationService : Service(), Callback {
 
 
         startEmergencyTimeout()
+        defineGsmCell();
         val powerManager = applicationContext.getSystemService(POWER_SERVICE) as PowerManager
 
 
@@ -113,9 +122,8 @@ class LocationService : Service(), Callback {
         )
     }
 
-    override fun onBind(intent: Intent?): IBinder? {
-        // return localBinder
-        return null
+    override fun onBind(intent: Intent?): IBinder {
+        return localBinder
     }
 
 
@@ -216,28 +224,6 @@ class LocationService : Service(), Callback {
         override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
     }
 
-
-    fun startNetListener() {
-
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
-        // notificationStart("startNetListener")
-        locationManagerNet?.requestLocationUpdates(
-            LocationManager.NETWORK_PROVIDER,
-            5000,
-            0F,
-            networkListener
-        )
-    }
-
     private fun timeoutForNetLocation(callback: () -> Unit) {
         timerForNetHandler = object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
@@ -267,6 +253,7 @@ class LocationService : Service(), Callback {
 
 
     fun sendWithWorker(location: Location, byLocation: String) {
+        Log.d(TAG, "Location define ${byLocation} ${location.longitude} ${location.latitude}")
         val currentTime = Date()
         val data = Data.Builder()
         data.putDouble("lng", location.longitude)
@@ -275,7 +262,6 @@ class LocationService : Service(), Callback {
         data.putString("time", getTime(currentTime))
         data.putInt("batt", batLevel.toInt())
         val workManager = WorkManager.getInstance(this)
-        // val atlasRest = AtlasRest(location, batLevel)
         val networkConstraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
@@ -316,20 +302,6 @@ class LocationService : Service(), Callback {
         }
     }
 
-
-    override fun onSuccess() {
-        val t2 = System.currentTimeMillis()
-        if (startServicetime + 30 * 1000 < t2) {
-            stopSelf()
-        }
-    }
-
-    override fun onFailure() {
-        val t2 = System.currentTimeMillis()
-        if (startServicetime + 30 * 1000 < t2) {
-            stopSelf()
-        }
-    }
 
     private fun notificationStart(messagee: String) {
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
@@ -375,6 +347,50 @@ class LocationService : Service(), Callback {
 
     }
 
+    private fun defineGsmCell() {
+        val telephonyManager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        val cellLocation = telephonyManager.allCellInfo as List<CellInfo>
+        var mcc: String? = ""
+        var mnc: String? = ""
+        var lac: String? = ""
+        for (item in cellLocation) {
+            item.isRegistered
+            val cel: CellIdentityLte = (item as CellInfoLte).cellIdentity
+
+            var cellId: String?
+            val map: MutableMap<String, String?> = mutableMapOf()
+            if (item.isRegistered) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    mcc = cel.mccString
+                    mnc = cel.mncString
+                } else {
+                    mcc = cel.mcc.toString()
+                    mnc = cel.mnc.toString()
+                }
+                lac = cel.tac.toString()
+                map.put("mcc", mcc)
+                map.put("mnc", mnc)
+                map.put("lac", lac)
+            }
+
+
+
+            cellId = cel.pci.toString()
+
+            map.put("cellId", cellId)
+
+            Log.d(TAG, "->>  ${mcc} ${mnc} ${lac} ${cellId}")
+
+        }
+    }
+
     companion object {
         private var COUNT = 0
         private var TWO_MINUTES = (60 * 1000 * 2).toLong()
@@ -388,7 +404,7 @@ class LocationService : Service(), Callback {
                 return powerManager.isDeviceIdleMode &&
                         !powerManager.isIgnoringBatteryOptimizations(context.packageName)
             } else {
-                return  false
+                return false
             }
         }
     }

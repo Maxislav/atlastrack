@@ -35,7 +35,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     lateinit var accuracyTextView: TextView
     lateinit var buttonStartStop: Button
 
-    var alarmManager: AlarmManager? = null
+    lateinit var alarmManager: AlarmManager
     private val workManager = WorkManager.getInstance(application)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,7 +44,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         setSupportActionBar(findViewById(R.id.toolbar))
         myReceiver = MyReceiver()
 
-        val telephonyManager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+
         if (ActivityCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
@@ -57,49 +57,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
         startBackgroundProcess();
 
-
-        val cellLocation = telephonyManager.allCellInfo as List<CellInfo>
-        for (item in cellLocation) {
-            item.isRegistered
-            val cel: CellIdentityLte = (item as CellInfoLte).cellIdentity
-            var mcc: String?
-            var mnc: String?
-            var lac: String?
-            var cellId: String?
-            val map: MutableMap<String, String?> = mutableMapOf()
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                mcc = cel.mccString
-                mnc = cel.mncString
-
-            } else {
-                mcc = cel.mcc.toString()
-                mnc = cel.mnc.toString()
-            }
-            lac = cel.tac.toString()
-            cellId = cel.pci.toString()
-            map.put("mcc", mcc)
-            map.put("mnc", mnc)
-            map.put("lac", lac)
-            map.put("cellId", cellId)
-
-            Log.d(TAG, "->>  ${mcc} ${mnc} ${lac} ${cellId}")
-            // val id =  cell.getCellIdentity()
-
-            // Log.d(TAG, "${cell.cellIdentity.toString()}")
-            // println(item)
-        }
-
-        /*export interface MobileCell {
-            mcc: number;
-            mnc: number;
-            lac: number;
-            cellId: number;
-            rxLevel?: number;
-        }*/
-
-        cellLocation
-
-        // workManager.enqueue(PeriodicWorkRequest)
         val vv = findViewById<TextView>(R.id.tv_device_id)
         vv.text = (BuildConfig.DEVICE_ID)
         lngLatTextView = findViewById(R.id.lng_lat)
@@ -107,8 +64,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         buttonStartStop = findViewById(R.id.start_stop_button)
         this.getWindow()
             .setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
-
-
         sharedPreferences =
             getSharedPreferences(getString(R.string.preference_file_key), Context.MODE_PRIVATE)
 
@@ -147,8 +102,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private fun startBackgroundProcess() {
         alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager;
         val alarmIntent = Intent(this, WakeUp::class.java)
-        //startService(alarmIntent)
-
         alarmIntent.setAction(WAKE_UP_ACTION)
             .putExtra("extra", "extra!")
 
@@ -158,9 +111,9 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             alarmIntent,
             PendingIntent.FLAG_CANCEL_CURRENT
         )
-        alarmManager?.cancel(pi)
+        alarmManager.cancel(pi)
         val time = System.currentTimeMillis() + 10;
-        alarmManager?.set(AlarmManager.RTC_WAKEUP, time, pi)
+        alarmManager.set(AlarmManager.RTC_WAKEUP, time, pi)
     }
 
     private fun requestLocationPermission() {
