@@ -27,12 +27,6 @@ class WakeUp : BroadcastReceiver() {
 
         alarmIntent.setAction(INTERVAL_ACTION)
             .putExtra("extra", "extra!")
-      /*  val pIntent2 = PendingIntent.getBroadcast(
-            context,
-            0,
-            alarmIntent,
-            0 // PendingIntent.FLAG_CANCEL_CURRENT
-        ) */
         val pIntent2 = PendingIntent.getBroadcast(
             context,
             0,
@@ -41,7 +35,7 @@ class WakeUp : BroadcastReceiver() {
         )
         // alarmManager?.cancel(pIntent2)
         val time = System.currentTimeMillis();
-        alarmManager?.set(
+        alarmManager.set(
             AlarmManager.RTC_WAKEUP,
             time,
             pIntent2

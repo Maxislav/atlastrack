@@ -2,8 +2,7 @@ package com.mars.atlastrack
 
 import android.content.Context
 import android.location.Location
-import android.os.Build
-import androidx.annotation.RequiresApi
+import androidx.work.Data
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import java.util.concurrent.CompletableFuture
@@ -13,6 +12,29 @@ class LocationWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, param
     val context = ctx
     var end = false
     override fun doWork(): Result {
+        val location = Location("A")
+        location.longitude = inputData.getDouble("lng", 0.0)
+        location.latitude = inputData.getDouble("lat", 0.0)
+        var date = inputData.getString("date")
+        var time = inputData.getString("time")
+        val batt = inputData.getInt("batt", 0)
+        if(date == null){
+            date = ""
+        }
+        if(time === null){
+            time = ""
+        }
+
+        val atlasRest = AtlasRest(location, batt, date, time)
+        val response =  atlasRest.execute()
+        if(response.isSuccessful){
+            val responseBody  = response.body()?.string()
+            val responseData = Data.Builder()
+            responseData.putString("body", responseBody);
+            return Result.success(responseData.build())
+        }
+
+
 
         /*val location = Location("A")
         location.longitude = inputData.getDouble("lng", 0.0)
@@ -26,7 +48,7 @@ class LocationWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, param
         //while ()
         // val completableFuture: CompletableFuture<String> = CompletableFuture<String>()
 
-        return Result.success()
+        return Result.failure()
     }
 
     override fun onSuccess() {

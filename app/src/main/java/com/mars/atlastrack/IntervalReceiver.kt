@@ -7,6 +7,8 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.content.ContextCompat
+import androidx.work.Constraints
+import androidx.work.NetworkType
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -29,6 +31,9 @@ class IntervalReceiver : BroadcastReceiver() {
 
         val serviceIntent = Intent(context, LocationService::class.java)
         ContextCompat.startForegroundService(context, serviceIntent);
+
+
+
 
        /* val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
         val alarmIntent = Intent(context, IntervalReceiver::class.java)

@@ -43,13 +43,13 @@ android {
             applicationId "com.mars.atlastrack"
             dimension "version"
             buildConfigField "String", "SERVER_BASE_PATH", "\"http://178.62.44.54:8080/\""
-            buildConfigField "String", "DEVICE_ID", "\"7777888899990000\""
+            buildConfigField "String", "DEVICE_ID", "\"000000000013\""
         }
         production{
             applicationId "com.mars.atlastrack"
             dimension "version"
             buildConfigField "String", "SERVER_BASE_PATH", "\"http://178.62.44.54:8080/\""
-            buildConfigField "String", "DEVICE_ID", "\"7777888899990000\""
+            buildConfigField "String", "DEVICE_ID", "\"000000000013\""
         }
     }
 }

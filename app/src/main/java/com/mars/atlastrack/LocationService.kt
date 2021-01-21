@@ -1,7 +1,6 @@
 package com.mars.atlastrack
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.*
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -18,6 +17,9 @@ import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Observer
 import androidx.work.*
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+import java.util.*
 
 
 class LocationService : Service(), Callback {
@@ -30,27 +32,29 @@ class LocationService : Service(), Callback {
     lateinit var networkListener: NetworkListener
     lateinit var gpsListener: GPSListener
     var gpsDefined = false
-    var time: Long = 0
+    var startServicetime: Long = 0
     var notificationId = 0
     var wakeLock: PowerManager.WakeLock? = null
     private lateinit var batLevel: Number
-    lateinit var batteryReceiver: BatteryReceiver
-    lateinit var hh: Handler
+    private lateinit var batteryReceiver: BatteryReceiver
+    private lateinit var emergencyHandler: Handler
+    var timerForNetHandler: Handler? = null
 
 
     // @SuppressLint("InvalidWakeLockTag")
     override fun onCreate() {
-        Log.d(TAG, "onCreate()")
+        Log.d(TAG, "onCreate")
+
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d(TAG, "onStartCommand")
+        super.onStartCommand(intent, flags, startId)
         setupNextAlarm();
-        time = System.currentTimeMillis()
+        startServicetime = System.currentTimeMillis()
 
-        hh = object : Handler(Looper.getMainLooper()) {
-            override fun handleMessage(msg: Message) {
-               this@LocationService.stopSelf()
-            }
-        }
 
-        onTimeout()
+        startEmergencyTimeout()
         val powerManager = applicationContext.getSystemService(POWER_SERVICE) as PowerManager
 
 
@@ -62,24 +66,18 @@ class LocationService : Service(), Callback {
                 PowerManager.PARTIAL_WAKE_LOCK, // PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
                 "atlas.track:wakelock"
             )
-            wakeLock?.acquire(10 * 60 * 1000L /*10 minutes*/)
-            batteryReceiver = BatteryReceiver()
+            wakeLock?.acquire(2 * 60 * 1000L /*10 minutes*/)
+            batteryReceiver = BatteryReceiver(fun(level: Number) {
+                batLevel = level
+                unregisterReceiver(batteryReceiver);
+                startLocationListeners()
+            })
             registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         }
-
-
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        super.onStartCommand(intent, flags, startId)
         return START_STICKY
     }
 
-    fun startLocationListeners() {
-        timeoutForNetLocation();
-        locationManagerNet = getSystemService(LOCATION_SERVICE) as LocationManager
-        locationManagerGps = getSystemService(LOCATION_SERVICE) as LocationManager
-
+    private fun startLocationListeners() {
         if (ActivityCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
@@ -91,8 +89,20 @@ class LocationService : Service(), Callback {
             stopSelf()
             return
         }
+
+        locationManagerNet = getSystemService(LOCATION_SERVICE) as LocationManager
+        locationManagerGps = getSystemService(LOCATION_SERVICE) as LocationManager
+
         networkListener = NetworkListener()
         gpsListener = GPSListener()
+        timeoutForNetLocation(fun() {
+            locationManagerNet?.requestLocationUpdates(
+                LocationManager.NETWORK_PROVIDER,
+                5000,
+                0F,
+                networkListener
+            )
+        });
 
         locationManagerGps?.requestLocationUpdates(
             LocationManager.GPS_PROVIDER,
@@ -120,12 +130,10 @@ class LocationService : Service(), Callback {
 
     override fun onDestroy() {
         Log.d(TAG, "onDestroy()")
-        hh.removeCallbacksAndMessages(null);
-        if (locationManagerNet != null) {
+        emergencyHandler.removeCallbacksAndMessages(null);
+        timerForNetHandler?.removeCallbacksAndMessages(null);
 
-            locationManagerNet?.removeUpdates(networkListener)
-        }
-
+        locationManagerNet?.removeUpdates(networkListener)
         locationManagerGps?.removeUpdates(gpsListener)
 
 
@@ -176,8 +184,11 @@ class LocationService : Service(), Callback {
     inner class GPSListener : LocationListener {
         override fun onLocationChanged(location: Location) {
             val t2 = System.currentTimeMillis()
-            gpsDefined = true
-            if (time + 60 * 1000 * 2 < t2) {
+            if (location.hasAccuracy() && location.accuracy < 200) {
+                gpsDefined = true
+            }
+
+            if (startServicetime + 60 * 1000 * 2 < t2) {
                 // notificationStart("GPS 2min ")
                 stopSelf()
             } else {
@@ -196,7 +207,7 @@ class LocationService : Service(), Callback {
             if (!gpsDefined) {
                 //   notificationStart("net ${location.longitude} ${location.latitude}")
                 sendWithWorker(location, NETWORK)
-            } else if (time + 60 * 1000 * 2 < t2) {
+            } else if (startServicetime + 60 * 1000 * 2 < t2) {
                 // notificationStart("net timeout")
                 stopSelf()
             }
@@ -227,41 +238,44 @@ class LocationService : Service(), Callback {
         )
     }
 
-    private fun timeoutForNetLocation() {
-        val h = object : Handler(Looper.getMainLooper()) {
+    private fun timeoutForNetLocation(callback: () -> Unit) {
+        timerForNetHandler = object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
-                startNetListener()
+                callback()
             }
         }
         val t = Thread {
             Thread.sleep(TEN_SECONDS)
-            h.sendEmptyMessage(1)
+            timerForNetHandler?.sendEmptyMessage(1)
         }
         t.start()
     }
 
 
-    private fun onTimeout() {
-       /* val h = object : Handler(Looper.getMainLooper()) {
+    private fun startEmergencyTimeout() {
+        emergencyHandler = object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
-                stopSelf()
+                this@LocationService.stopSelf()
             }
-        }*/
+        }
         val t = Thread {
-
             Thread.sleep(TWO_MINUTES)
-            hh.sendEmptyMessage(1)
+            emergencyHandler.sendEmptyMessage(1)
         }
         t.start()
     }
 
 
     fun sendWithWorker(location: Location, byLocation: String) {
+        val currentTime = Date()
         val data = Data.Builder()
         data.putDouble("lng", location.longitude)
         data.putDouble("lat", location.latitude)
+        data.putString("date", getDate(currentTime))
+        data.putString("time", getTime(currentTime))
+        data.putInt("batt", batLevel.toInt())
         val workManager = WorkManager.getInstance(this)
-        val atlasRest = AtlasRest(location, batLevel)
+        // val atlasRest = AtlasRest(location, batLevel)
         val networkConstraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
@@ -271,36 +285,48 @@ class LocationService : Service(), Callback {
             .build()
         workManager.getWorkInfoByIdLiveData(uploadTask.id)
             .observeForever(Observer { workInfo: WorkInfo? ->
-
                 if (workInfo != null && workInfo.state.isFinished) {
-
-                    atlasRest.request(this@LocationService)
+                    Log.d(TAG, "response ok ${workInfo.outputData.getString("body")}")
                 }
             })
         workManager.enqueue(uploadTask)
     }
 
-    inner class BatteryReceiver : BroadcastReceiver() {
+    private fun getDate(currentTime: Date): String {
+        val dateFormat: DateFormat = SimpleDateFormat("ddMMyy")
+        dateFormat.timeZone = TimeZone.getTimeZone("UTC")
+        val sdf = SimpleDateFormat("HHmmss")
+        sdf.timeZone = TimeZone.getTimeZone("UTC")
+        val time: String = sdf.format(currentTime)
+        return dateFormat.format(currentTime)
+    }
+
+    private fun getTime(currentTime: Date): String {
+        val dateFormat: DateFormat = SimpleDateFormat("ddMMyy")
+        dateFormat.timeZone = TimeZone.getTimeZone("UTC")
+        val sdf = SimpleDateFormat("HHmmss")
+        sdf.timeZone = TimeZone.getTimeZone("UTC")
+        return sdf.format(currentTime)
+    }
+
+    inner class BatteryReceiver(val callback: (level: Number) -> Unit) : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val level = intent!!.getIntExtra("level", 0)
-            batLevel = level
-            unregisterReceiver(batteryReceiver);
-            startLocationListeners()
+            callback(level)
         }
     }
 
 
-
     override fun onSuccess() {
         val t2 = System.currentTimeMillis()
-        if (time + 30 * 1000 < t2) {
+        if (startServicetime + 30 * 1000 < t2) {
             stopSelf()
         }
     }
 
     override fun onFailure() {
         val t2 = System.currentTimeMillis()
-        if (time + 30 * 1000 < t2) {
+        if (startServicetime + 30 * 1000 < t2) {
             stopSelf()
         }
     }
@@ -322,11 +348,11 @@ class LocationService : Service(), Callback {
         nm.notify(COUNT, notification)
     }
 
-    private fun setupNextAlarm(): Unit{
+    private fun setupNextAlarm(): Unit {
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager;
         val alarmIntent = Intent(this, IntervalReceiver::class.java)
         val time = System.currentTimeMillis() + TWENTY_MINUTES;
-        val pIntent2 = PendingIntent.getBroadcast(
+        val pi = PendingIntent.getBroadcast(
             this,
             0,
             alarmIntent,
@@ -337,30 +363,32 @@ class LocationService : Service(), Callback {
             alarmManager.setAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
                 time,
-                pIntent2)
+                pi
+            )
         } else {
             alarmManager.set(
                 AlarmManager.RTC_WAKEUP,
                 time,
-                pIntent2
+                pi
             )
         }
 
     }
+
     companion object {
         private var COUNT = 0
         private var TWO_MINUTES = (60 * 1000 * 2).toLong()
         private var TEN_SECONDS = (10 * 1000).toLong()
-        private var TWENTY_MINUTES = 60*1000*20
+        private var TWENTY_MINUTES = 60 * 1000 * 20
         private var GPS = "GPS"
         private var NETWORK = "NETWORK"
         fun isDozing(context: Context): Boolean {
-            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 val powerManager = context.getSystemService(POWER_SERVICE) as PowerManager
-                powerManager.isDeviceIdleMode &&
+                return powerManager.isDeviceIdleMode &&
                         !powerManager.isIgnoringBatteryOptimizations(context.packageName)
             } else {
-                false
+                return  false
             }
         }
     }
