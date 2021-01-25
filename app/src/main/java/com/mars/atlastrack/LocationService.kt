@@ -13,17 +13,18 @@ import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.*
-import android.telephony.CellIdentityLte
-import android.telephony.CellInfo
-import android.telephony.CellInfoLte
-import android.telephony.TelephonyManager
+import android.telephony.*
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Observer
 import androidx.work.*
+import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.Exception
 
 
 class LocationService : Service() {
@@ -63,10 +64,20 @@ class LocationService : Service() {
 
 
         startEmergencyTimeout()
-        defineGsmCell();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            try {
+                defineGsmCell()
+            }catch (e: Exception){
+                Log.d(TAG, e.stackTraceToString())
+            }
+        };
+
         val powerManager = applicationContext.getSystemService(POWER_SERVICE) as PowerManager
-
-
+        val isNetProviderEnabled =
+            (getSystemService(LOCATION_SERVICE) as LocationManager).isProviderEnabled(
+                LocationManager.NETWORK_PROVIDER
+            )
+        isNetProviderEnabled
         if ((getSystemService(LOCATION_SERVICE) as LocationManager).isProviderEnabled(
                 LocationManager.GPS_PROVIDER
             )
@@ -205,6 +216,9 @@ class LocationService : Service() {
 
         }
 
+        override fun onProviderEnabled(provider: String) {}
+        override fun onProviderDisabled(provider: String) {}
+
         override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
     }
 
@@ -219,6 +233,14 @@ class LocationService : Service() {
                 // notificationStart("net timeout")
                 stopSelf()
             }
+        }
+
+        override fun onProviderEnabled(provider: String) {
+            Log.d(TAG, provider)
+        }
+
+        override fun onProviderDisabled(provider: String) {
+            Log.d(TAG, provider)
         }
 
         override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
@@ -347,7 +369,9 @@ class LocationService : Service() {
 
     }
 
+    @RequiresApi(Build.VERSION_CODES.R)
     private fun defineGsmCell() {
+        // android.telephony.CellInfoWcdma cannot be cast to android.telephony.CellInfoLte
         val telephonyManager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
         if (ActivityCompat.checkSelfPermission(
                 this,
@@ -356,13 +380,17 @@ class LocationService : Service() {
         ) {
             return
         }
-        val cellLocation = telephonyManager.allCellInfo as List<CellInfo>
+        val cellLocation: List<CellInfo> = telephonyManager.allCellInfo
         var mcc: String? = ""
         var mnc: String? = ""
         var lac: String? = ""
         for (item in cellLocation) {
             item.isRegistered
-            val cel: CellIdentityLte = (item as CellInfoLte).cellIdentity
+
+            //val dd = item.cellIdentity
+
+            val cel: CellIdentityLte = item.cellIdentity as CellIdentityLte
+
 
             var cellId: String?
             val map: MutableMap<String, String?> = mutableMapOf()
@@ -379,7 +407,7 @@ class LocationService : Service() {
                 map.put("mnc", mnc)
                 map.put("lac", lac)
             }
-
+            val gson = Gson()
 
 
             cellId = cel.pci.toString()
@@ -388,8 +416,19 @@ class LocationService : Service() {
 
             Log.d(TAG, "->>  ${mcc} ${mnc} ${lac} ${cellId}")
 
+            val f = JsonDataParser(mcc)
+            val json = Gson()
+            var jsonString = gson.toJson(f)
+
         }
     }
+
+    data class JsonDataParser(
+        @SerializedName("mcc") val mcc: String?,
+        /*   @SerializedName("mnc") val mnc: String,
+           @SerializedName("lac") val lac: String,
+           @SerializedName("cellId") val cellId: String*/
+    )
 
     companion object {
         private var COUNT = 0

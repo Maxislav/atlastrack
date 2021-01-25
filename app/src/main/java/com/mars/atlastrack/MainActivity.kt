@@ -43,7 +43,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.toolbar))
         myReceiver = MyReceiver()
-
+       // startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
 
         if (ActivityCompat.checkSelfPermission(
                 this,
