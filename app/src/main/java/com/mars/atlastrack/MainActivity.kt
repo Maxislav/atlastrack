@@ -102,8 +102,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private fun startBackgroundProcess() {
         alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager;
         val alarmIntent = Intent(this, WakeUp::class.java)
-        alarmIntent.setAction(WAKE_UP_ACTION)
-            .putExtra("extra", "extra!")
+        alarmIntent.action = WAKE_UP_ACTION
 
         val pi = PendingIntent.getBroadcast(
             this,
@@ -111,8 +110,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             alarmIntent,
             PendingIntent.FLAG_CANCEL_CURRENT
         )
-        alarmManager.cancel(pi)
-        val time = System.currentTimeMillis() + 10;
+        // alarmManager.cancel(pi)
+        val time = System.currentTimeMillis() + 1000;
         alarmManager.set(AlarmManager.RTC_WAKEUP, time, pi)
     }
 

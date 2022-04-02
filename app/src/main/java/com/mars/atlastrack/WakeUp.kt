@@ -18,7 +18,7 @@ class WakeUp : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
        //  Log.d(TAG, "onReceive")
         val currentTime: Date = Calendar.getInstance().getTime()
-        val dateFormat: DateFormat = SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
+        val dateFormat: DateFormat = SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH)
         val strDate: String = dateFormat.format(currentTime)
         Log.d(TAG, "onReceive ${strDate}")
         alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
@@ -35,17 +35,17 @@ class WakeUp : BroadcastReceiver() {
         )
         // alarmManager?.cancel(pIntent2)
         val time = System.currentTimeMillis();
-        alarmManager.set(
+        /*alarmManager.set(
             AlarmManager.RTC_WAKEUP,
             time,
-            pIntent2
-        )
-      /*  alarmManager.setRepeating(
-            AlarmManager.RTC_WAKEUP,
-            time,
-            60000*15 ,
             pIntent2
         )*/
+        alarmManager.setRepeating(
+            AlarmManager.RTC_WAKEUP,
+            time,
+            60*1000*20 ,
+            pIntent2
+        )
 
 
     }

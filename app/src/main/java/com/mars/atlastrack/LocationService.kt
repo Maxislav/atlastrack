@@ -1,6 +1,7 @@
 package com.mars.atlastrack
 
 import android.Manifest
+import android.R.id
 import android.app.*
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -17,6 +18,7 @@ import android.telephony.*
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
 import androidx.lifecycle.Observer
 import androidx.work.*
 import com.google.gson.Gson
@@ -24,7 +26,6 @@ import com.google.gson.annotations.SerializedName
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.Exception
 
 
 class LocationService : Service() {
@@ -42,14 +43,12 @@ class LocationService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private lateinit var batLevel: Number
     private lateinit var batteryReceiver: BatteryReceiver
-    private lateinit var emergencyHandler: Handler
+    private var emergencyHandler: Handler? = null
     var timerForNetHandler: Handler? = null
+    private val NOTIFICATION_ID = 8675309
 
 
-    override fun onCreate() {
-        Log.d(TAG, "onCreate")
 
-    }
 
     override fun onLowMemory() {
         super.onLowMemory()
@@ -59,15 +58,13 @@ class LocationService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand")
         super.onStartCommand(intent, flags, startId)
-        setupNextAlarm();
+        notificationStart("Location update")
         startServicetime = System.currentTimeMillis()
-
-
         startEmergencyTimeout()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             try {
                 defineGsmCell()
-            }catch (e: Exception){
+            } catch (e: Exception) {
                 Log.d(TAG, e.stackTraceToString())
             }
         };
@@ -83,12 +80,13 @@ class LocationService : Service() {
             )
         ) {
             wakeLock = powerManager.newWakeLock(
-                PowerManager.PARTIAL_WAKE_LOCK, // PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                PowerManager.SCREEN_DIM_WAKE_LOCK or PowerManager.ON_AFTER_RELEASE, // PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
                 "atlas.track:wakelock"
             )
             wakeLock?.acquire(2 * 60 * 1000L /*10 minutes*/)
             batteryReceiver = BatteryReceiver(fun(level: Number) {
                 batLevel = level
+                Log.d(TAG, "bat level ${batLevel}")
                 unregisterReceiver(batteryReceiver);
                 startLocationListeners()
             })
@@ -124,13 +122,20 @@ class LocationService : Service() {
             )
         });
 
-        locationManagerGps?.requestLocationUpdates(
-            LocationManager.GPS_PROVIDER,
-            10000,
-            0F,
-            gpsListener
+        locationManagerGps?.let {
 
-        )
+            Log.d(TAG, "locationManagerGps")
+
+            it.requestLocationUpdates(
+                LocationManager.GPS_PROVIDER,
+                10000,
+                0F,
+                gpsListener
+
+            )
+        }
+        Log.d(TAG, "locationManagerGps ++")
+
     }
 
     override fun onBind(intent: Intent?): IBinder {
@@ -138,18 +143,9 @@ class LocationService : Service() {
     }
 
 
-    fun createIntent(action: String?, extra: String?): Intent {
-        /* SampleBootReceiver sm = new SampleBootReceiver();
-        sm.setMainActivity(this);*/
-        val intent = Intent(this, WakeUp::class.java)
-        intent.action = action
-        intent.putExtra("extra", extra)
-        return intent
-    }
-
     override fun onDestroy() {
         Log.d(TAG, "onDestroy()")
-        emergencyHandler.removeCallbacksAndMessages(null);
+        emergencyHandler?.removeCallbacksAndMessages(null);
         timerForNetHandler?.removeCallbacksAndMessages(null);
 
         locationManagerNet?.removeUpdates(networkListener)
@@ -207,8 +203,8 @@ class LocationService : Service() {
                 gpsDefined = true
             }
 
-            if (startServicetime + 60 * 1000 * 2 < t2) {
-                // notificationStart("GPS 2min ")
+            if (startServicetime + 30 * 1000 * 2 < t2) {
+                Log.d(TAG, "stopSelf from gps")
                 stopSelf()
             } else {
                 sendWithWorker(location, GPS)
@@ -267,8 +263,8 @@ class LocationService : Service() {
             }
         }
         val t = Thread {
-            Thread.sleep(TWO_MINUTES)
-            emergencyHandler.sendEmptyMessage(1)
+            Thread.sleep(30 * 1000)
+            emergencyHandler?.sendEmptyMessage(1)
         }
         t.start()
     }
@@ -326,20 +322,46 @@ class LocationService : Service() {
 
 
     private fun notificationStart(messagee: String) {
-        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        val intent1 = Intent(this, MainActivity::class.java)
-        intent1.putExtra("were_from", "my_service")
-        intent1.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
 
-        val pendingIntent = PendingIntent.getActivity(this, 0, intent1, PendingIntent.FLAG_ONE_SHOT)
-        val notification = Notification.Builder(this).setContentTitle("LocationService")
-            .setContentText("network ${isInternetAvailable(this)} | ${messagee}")
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val serviceChannel = NotificationChannel(
+                "CHANNEL_IDDD",
+                "Location Service Channel",
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            serviceChannel.description = "no sound";
+            serviceChannel.setShowBadge(true)
+            serviceChannel.setSound(null, null) //< ----ignore sound
+            serviceChannel.enableLights(false)
+            manager.createNotificationChannel(serviceChannel)
+        }
+        val cancelIntent = Intent("CHANNEL_ID")
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            this, 0,
+            cancelIntent, PendingIntent.FLAG_CANCEL_CURRENT
+        )
+
+
+        /*val notificationIntent = Intent(this, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            1,
+            notificationIntent, 0
+        )*/
+
+        val nfc = NotificationCompat.Builder(this, "CHANNEL_IDDD")
+            .setContentTitle(getString(R.string.app_name))
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_SECRET)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
-            .setSmallIcon(R.drawable.ic_launch)
+            .setOngoing(true)
             .build()
-        notification.flags = Notification.FLAG_SHOW_LIGHTS or Notification.FLAG_AUTO_CANCEL
-        COUNT++
-        nm.notify(COUNT, notification)
+        startForeground(1, nfc)
     }
 
     private fun setupNextAlarm(): Unit {
