@@ -33,10 +33,15 @@ class WakeUp : BroadcastReceiver() {
             PendingIntent.FLAG_CANCEL_CURRENT
         )
         val time = System.currentTimeMillis();
-        alarmManager.setRepeating(
+        /*alarmManager.setRepeating(
             AlarmManager.RTC_WAKEUP,
             time,
             60*1000*20 ,
+            pIntent2
+        )*/
+        alarmManager.set(
+            AlarmManager.RTC_WAKEUP,
+            time,
             pIntent2
         )
 

@@ -54,6 +54,7 @@ class LocationService : Service() {
         super.onStartCommand(intent, flags, startId)
         notificationStart("Location update")
         startServicetime = System.currentTimeMillis()
+        setupNextAlarm();
         startEmergencyTimeout()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             try {
