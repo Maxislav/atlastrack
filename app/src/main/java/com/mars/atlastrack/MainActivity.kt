@@ -67,9 +67,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         sharedPreferences =
             getSharedPreferences(getString(R.string.preference_file_key), Context.MODE_PRIVATE)
 
-
-        // alarmManager?.setRepeating(AlarmManager.RTC_WAKEUP, time)
-
         val serviceIntent = Intent(this, ForegroundOnlyLocationService::class.java)
         buttonStartStop.setOnClickListener { view ->
             val b = view as Button
@@ -92,10 +89,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                         buttonStartStop.text = getString(R.string.start)
                         bound = false
                     }
-
                 }
             }
-
         }
     }
 
@@ -167,37 +162,16 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private fun requestForegroundPermissions() {
         val provideRationale = foregroundPermissionApproved()
 
-        // If the user denied a previous request, but didn't check "Don't ask again", provide
-        // additional rationale.
+
         if (provideRationale) {
-            /* Snackbar.make(
-                 findViewById(R.id.activity_main),
-                 R.string.permission_rationale,
-                 Snackbar.LENGTH_LONG
-             )
-                 .setAction(R.string.ok) {
-                     // Request permission
-                     ActivityCompat.requestPermissions(
-                         this@MainActivity,
-                         arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                         REQUEST_FOREGROUND_ONLY_PERMISSIONS_REQUEST_CODE
-                     )
-                 }
-                 .show()*/
+
         } else {
             Log.d(TAG, "Request foreground only permission")
-            /*ActivityCompat.requestPermissions(
-                this@MainActivity,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                REQUEST_FOREGROUND_ONLY_PERMISSIONS_REQUEST_CODE
-            )*/
         }
     }
 
     override fun onStart() {
         super.onStart()
-        /*  val serviceIntent = Intent(this, ForegroundOnlyLocationService::class.java)
-          bindService(serviceIntent, foregroundOnlyServiceConnection, Context.BIND_AUTO_CREATE)*/
     }
 
     override fun onResume() {
@@ -227,9 +201,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private fun logResultsToScreen(location: Location) {
         lngLatTextView.text = "${location.longitude} : ${location.latitude}"
         accuracyTextView.text = "${location.accuracy}"
-        // location.accuracy
-        // val outputWithPreviousLogs = "$output"
-        //  outputTextView.text = outputWithPreviousLogs
     }
 
     private inner class MyReceiver : BroadcastReceiver() {
@@ -243,34 +214,5 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                 logResultsToScreen(location)
             }
         }
-
-        /*override fun onReceive(context: Context, intent: Intent) {
-            val location = intent.getParcelableExtra<Location>(
-                ForegroundOnlyLocationService.EXTRA_LOCATION
-            )
-
-            if (location != null) {
-                logResultsToScreen("Foreground location: ${location.toText()}")
-            }
-        }*/
-
     }
-
-
-    /*override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        menuInflater.inflate(R.menu.menu_main, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        return when (item.itemId) {
-            R.id.action_settings -> true
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-*/
 }

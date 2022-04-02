@@ -27,16 +27,6 @@ class AtlasRest(val location: Location, batLevel: Number, date: String, time: St
     lateinit var callbackLocation: com.mars.atlastrack.Callback
 
 
-    /* constructor(location: Location, batLevel: Number, date: String, time: String){
-         this.location = location
-         val retrofit = Retrofit.Builder()
-             .baseUrl(BuildConfig.SERVER_BASE_PATH) // .addConverterFactory(GsonConverterFactory.create())
-             .build()
-         val gprmc = createGprmc(location, date, time)
-         val service = retrofit.create(WebService::class.java)
-         onLog = service.log(BuildConfig.DEVICE_ID, gprmc, batLevel)
-     }*/
-
     interface WebService {
         @GET("/log")
         open fun log(
@@ -54,9 +44,9 @@ class AtlasRest(val location: Location, batLevel: Number, date: String, time: St
 
     private fun createGprmc(): String {
         val currentTime = Date()
-        val dateFormat: DateFormat = SimpleDateFormat("ddMMyy")
+        val dateFormat: DateFormat = SimpleDateFormat("ddMMyy", Locale.ENGLISH)
         dateFormat.timeZone = TimeZone.getTimeZone("UTC")
-        val sdf = SimpleDateFormat("HHmmss")
+        val sdf = SimpleDateFormat("HHmmss", Locale.ENGLISH)
         sdf.timeZone = TimeZone.getTimeZone("UTC")
         val time: String = sdf.format(currentTime)
         val date = dateFormat.format(currentTime)

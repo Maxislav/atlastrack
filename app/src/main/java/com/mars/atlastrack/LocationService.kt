@@ -1,7 +1,6 @@
 package com.mars.atlastrack
 
 import android.Manifest
-import android.R.id
 import android.app.*
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -29,26 +28,21 @@ import java.util.*
 
 
 class LocationService : Service() {
-    private val TAG = "LocationService"
-    private val localBinder = LocalBinder()
-    private var locationManagerNet: LocationManager? = null
-    private var locationManagerGps: LocationManager? = null
-    lateinit var locationListenerNet: MyLocationListener
-    lateinit var atlasRest: AtlasRest
+
     lateinit var networkListener: NetworkListener
     lateinit var gpsListener: GPSListener
+
     private var gpsDefined = false
     private var startServicetime: Long = 0
-    var notificationId = 0
     private var wakeLock: PowerManager.WakeLock? = null
     private lateinit var batLevel: Number
     private lateinit var batteryReceiver: BatteryReceiver
     private var emergencyHandler: Handler? = null
-    var timerForNetHandler: Handler? = null
-    private val NOTIFICATION_ID = 8675309
-
-
-
+    private var timerForNetHandler: Handler? = null
+    private val localBinder = LocalBinder()
+    private var locationManagerNet: LocationManager? = null
+    private var locationManagerGps: LocationManager? = null
+    private val TAG = "LocationService"
 
     override fun onLowMemory() {
         super.onLowMemory()
@@ -297,18 +291,18 @@ class LocationService : Service() {
     }
 
     private fun getDate(currentTime: Date): String {
-        val dateFormat: DateFormat = SimpleDateFormat("ddMMyy")
+        val dateFormat: DateFormat = SimpleDateFormat("ddMMyy", Locale.ENGLISH)
         dateFormat.timeZone = TimeZone.getTimeZone("UTC")
-        val sdf = SimpleDateFormat("HHmmss")
+        val sdf = SimpleDateFormat("HHmmss", Locale.ENGLISH)
         sdf.timeZone = TimeZone.getTimeZone("UTC")
         val time: String = sdf.format(currentTime)
         return dateFormat.format(currentTime)
     }
 
     private fun getTime(currentTime: Date): String {
-        val dateFormat: DateFormat = SimpleDateFormat("ddMMyy")
+        val dateFormat: DateFormat = SimpleDateFormat("ddMMyy", Locale.ENGLISH)
         dateFormat.timeZone = TimeZone.getTimeZone("UTC")
-        val sdf = SimpleDateFormat("HHmmss")
+        val sdf = SimpleDateFormat("HHmmss", Locale.ENGLISH)
         sdf.timeZone = TimeZone.getTimeZone("UTC")
         return sdf.format(currentTime)
     }
@@ -322,8 +316,6 @@ class LocationService : Service() {
 
 
     private fun notificationStart(messagee: String) {
-
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val serviceChannel = NotificationChannel(
                 "CHANNEL_IDDD",
@@ -343,14 +335,6 @@ class LocationService : Service() {
             this, 0,
             cancelIntent, PendingIntent.FLAG_CANCEL_CURRENT
         )
-
-
-        /*val notificationIntent = Intent(this, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            1,
-            notificationIntent, 0
-        )*/
 
         val nfc = NotificationCompat.Builder(this, "CHANNEL_IDDD")
             .setContentTitle(getString(R.string.app_name))

@@ -20,10 +20,9 @@ class WakeUp : BroadcastReceiver() {
         val currentTime: Date = Calendar.getInstance().getTime()
         val dateFormat: DateFormat = SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH)
         val strDate: String = dateFormat.format(currentTime)
-        Log.d(TAG, "onReceive ${strDate}")
+        Log.d(TAG, "WakeUp ${strDate}")
         alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
         val alarmIntent = Intent(context, IntervalReceiver::class.java)
-        //context.startService(alarmIntent)
 
         alarmIntent.setAction(INTERVAL_ACTION)
             .putExtra("extra", "extra!")
@@ -33,13 +32,7 @@ class WakeUp : BroadcastReceiver() {
             alarmIntent,
             PendingIntent.FLAG_CANCEL_CURRENT
         )
-        // alarmManager?.cancel(pIntent2)
         val time = System.currentTimeMillis();
-        /*alarmManager.set(
-            AlarmManager.RTC_WAKEUP,
-            time,
-            pIntent2
-        )*/
         alarmManager.setRepeating(
             AlarmManager.RTC_WAKEUP,
             time,
