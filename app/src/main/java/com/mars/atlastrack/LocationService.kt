@@ -80,7 +80,7 @@ class LocationService : Service() {
             )
         ) {
             wakeLock = powerManager.newWakeLock(
-                PowerManager.SCREEN_DIM_WAKE_LOCK or PowerManager.ON_AFTER_RELEASE, // PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                PowerManager.PARTIAL_WAKE_LOCK,  // PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
                 "atlas.track:wakelock"
             )
             wakeLock?.acquire(2 * 60 * 1000L /*10 minutes*/)
@@ -359,6 +359,7 @@ class LocationService : Service() {
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
+            .setContentText("Location update...")
             .setOngoing(true)
             .build()
         startForeground(1, nfc)
