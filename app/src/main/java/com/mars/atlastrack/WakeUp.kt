@@ -39,7 +39,7 @@ class WakeUp : BroadcastReceiver() {
             60*1000*20 ,
             pIntent2
         )*/
-        alarmManager.set(
+        alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
             time,
             pIntent2

@@ -36,7 +36,7 @@
             <intent-filter>
 
 
-                <action android:name="android.intent.action.MANAGE_NETWORK_USAGE" />
+                <action android:name="com.mars.atlastrack.action.INTERVAL_ACTION" />
                 <action android:name="android.intent.action.MANAGE_NETWORK_USAGE" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.ACTION_BATTERY_OKAY" />

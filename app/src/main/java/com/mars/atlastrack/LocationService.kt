@@ -22,6 +22,7 @@ import androidx.lifecycle.Observer
 import androidx.work.*
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import com.mars.atlastrack.SharedPreferenceUtil.isDozing
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -29,8 +30,8 @@ import java.util.*
 
 class LocationService : Service() {
 
-    lateinit var networkListener: NetworkListener
-    lateinit var gpsListener: GPSListener
+    var networkListener: NetworkListener? = null
+    var gpsListener: GPSListener? = null
 
     private var gpsDefined = false
     private var startServicetime: Long = 0
@@ -46,7 +47,7 @@ class LocationService : Service() {
 
     override fun onLowMemory() {
         super.onLowMemory()
-        setupNextAlarm()
+        // setupNextAlarm()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -54,7 +55,6 @@ class LocationService : Service() {
         super.onStartCommand(intent, flags, startId)
         notificationStart("Location update")
         startServicetime = System.currentTimeMillis()
-        setupNextAlarm();
         startEmergencyTimeout()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             try {
@@ -108,26 +108,32 @@ class LocationService : Service() {
 
         networkListener = NetworkListener()
         gpsListener = GPSListener()
-        timeoutForNetLocation(fun() {
-            locationManagerNet?.requestLocationUpdates(
-                LocationManager.NETWORK_PROVIDER,
-                5000,
-                0F,
-                networkListener
-            )
-        });
+
+        timeoutForNetLocation {
+            if (locationManagerNet !== null && networkListener !== null) {
+                locationManagerNet?.requestLocationUpdates(
+                    LocationManager.NETWORK_PROVIDER,
+                    5000,
+                    0F,
+                    networkListener!!
+                )
+            }
+        };
 
         locationManagerGps?.let {
 
             Log.d(TAG, "locationManagerGps")
+            if (gpsListener != null){
+                it.requestLocationUpdates(
+                    LocationManager.GPS_PROVIDER,
+                    10000,
+                    0F,
+                    gpsListener!!
 
-            it.requestLocationUpdates(
-                LocationManager.GPS_PROVIDER,
-                10000,
-                0F,
-                gpsListener
+                )
+            }
 
-            )
+
         }
         Log.d(TAG, "locationManagerGps ++")
 
@@ -143,8 +149,13 @@ class LocationService : Service() {
         emergencyHandler?.removeCallbacksAndMessages(null);
         timerForNetHandler?.removeCallbacksAndMessages(null);
 
-        locationManagerNet?.removeUpdates(networkListener)
-        locationManagerGps?.removeUpdates(gpsListener)
+        networkListener?.let {
+            locationManagerNet?.removeUpdates(it)
+        }
+        gpsListener?.let {
+            locationManagerGps?.removeUpdates(it)
+        }
+
 
 
         if (wakeLock != null && wakeLock!!.isHeld) {
@@ -266,7 +277,7 @@ class LocationService : Service() {
 
 
     fun sendWithWorker(location: Location, byLocation: String) {
-        Log.d(TAG, "Location define ${byLocation} ${location.longitude} ${location.latitude}")
+        console.log("Location define ${byLocation} ${location.longitude} ${location.latitude}")
         val currentTime = Date()
         val data = Data.Builder()
         data.putDouble("lng", location.longitude)
@@ -354,26 +365,34 @@ class LocationService : Service() {
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager;
         val alarmIntent = Intent(this, IntervalReceiver::class.java)
         val time = System.currentTimeMillis() + TWENTY_MINUTES;
+
+        /* val serviceIntent = Intent(this, LocationService::class.java)
+         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+             startForegroundService(serviceIntent)
+         }else{
+             startService(serviceIntent)
+         }*/
+
         val pi = PendingIntent.getBroadcast(
             this,
             0,
             alarmIntent,
             PendingIntent.FLAG_CANCEL_CURRENT
         )
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            time,
+            pi
+        )
+        /*if (isDozing(this)) {
 
-        if (isDozing(this)) {
-            alarmManager.setAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                time,
-                pi
-            )
         } else {
             alarmManager.set(
                 AlarmManager.RTC_WAKEUP,
                 time,
                 pi
             )
-        }
+        }*/
 
     }
 
@@ -438,6 +457,13 @@ class LocationService : Service() {
            @SerializedName("cellId") val cellId: String*/
     )
 
+    internal object console {
+        val TAG = "LocationService"
+        fun log(message: String) {
+            Log.d(TAG, message)
+        }
+    }
+
     companion object {
         private var COUNT = 0
         private var TWO_MINUTES = (60 * 1000 * 2).toLong()
@@ -445,15 +471,8 @@ class LocationService : Service() {
         private var TWENTY_MINUTES = 60 * 1000 * 20
         private var GPS = "GPS"
         private var NETWORK = "NETWORK"
-        fun isDozing(context: Context): Boolean {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val powerManager = context.getSystemService(POWER_SERVICE) as PowerManager
-                return powerManager.isDeviceIdleMode &&
-                        !powerManager.isIgnoringBatteryOptimizations(context.packageName)
-            } else {
-                return false
-            }
-        }
+
+
     }
 }
 

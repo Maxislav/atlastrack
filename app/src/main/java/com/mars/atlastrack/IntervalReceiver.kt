@@ -1,10 +1,15 @@
 package com.mars.atlastrack
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Context.ALARM_SERVICE
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import androidx.core.content.ContextCompat.getSystemService
+import com.mars.atlastrack.SharedPreferenceUtil.TWENTY_MINUTES
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -20,8 +25,25 @@ class IntervalReceiver : BroadcastReceiver() {
         val strDate: String = dateFormat.format(currentTime)
         Log.d(TAG, "onReceive ${strDate}")
         val serviceIntent = Intent(context, LocationService::class.java)
+
+        val alarmManager = context.getSystemService(ALARM_SERVICE) as AlarmManager;
+        val alarmIntent = Intent(context, IntervalReceiver::class.java)
+        alarmIntent.action = INTERVAL_ACTION
+        val pIntent2 = PendingIntent.getBroadcast(
+            context,
+            0,
+            alarmIntent,
+            PendingIntent.FLAG_CANCEL_CURRENT
+        )
+        val nextAlarmTime = System.currentTimeMillis() + TWENTY_MINUTES
+        alarmManager.setAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            nextAlarmTime,
+            pIntent2
+        )
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService( serviceIntent)
+            context.startForegroundService(serviceIntent)
         }else{
             context.startService(serviceIntent)
         }

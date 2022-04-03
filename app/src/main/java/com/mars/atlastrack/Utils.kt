@@ -1,7 +1,10 @@
 package com.mars.atlastrack
 
+import android.app.Service
 import android.content.Context
 import android.location.Location
+import android.os.Build
+import android.os.PowerManager
 import androidx.core.content.edit
 
 fun Location?.toText():String {
@@ -18,6 +21,10 @@ fun Location?.toText():String {
 internal object SharedPreferenceUtil {
 
     const val KEY_FOREGROUND_ENABLED = "tracking_foreground_location"
+
+    const val TWO_MINUTES = (60 * 1000 * 2).toLong()
+    const val TEN_SECONDS = (10 * 1000).toLong()
+    const val TWENTY_MINUTES = 60 * 1000 * 20
 
     /**
      * Returns true if requesting location updates, otherwise returns false.
@@ -39,4 +46,14 @@ internal object SharedPreferenceUtil {
             Context.MODE_PRIVATE).edit {
             putBoolean(KEY_FOREGROUND_ENABLED, requestingLocationUpdates)
         }
+
+    fun isDozing(context: Context): Boolean {
+        val powerManager = context.getSystemService(Service.POWER_SERVICE) as PowerManager
+        return powerManager.isDeviceIdleMode &&
+                !powerManager.isIgnoringBatteryOptimizations(context.packageName)
+    }
+
+
+
+
 }
