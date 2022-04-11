@@ -27,18 +27,21 @@ class IntervalReceiver : BroadcastReceiver() {
         val serviceIntent = Intent(context, LocationService::class.java)
 
         val alarmManager = context.getSystemService(ALARM_SERVICE) as AlarmManager;
-        val alarmIntent = Intent(context, IntervalReceiver::class.java)
+        val alarmIntent = Intent(context, LocationService::class.java)
         alarmIntent.action = INTERVAL_ACTION
-        val pIntent2 = PendingIntent.getBroadcast(
+        val pIntent2 = PendingIntent.getService(
             context,
             0,
             alarmIntent,
             PendingIntent.FLAG_CANCEL_CURRENT
         )
-        val nextAlarmTime = System.currentTimeMillis() + TWENTY_MINUTES
-        alarmManager.setAndAllowWhileIdle(
+        val nextAlarmTime = System.currentTimeMillis()//  + TWENTY_MINUTES
+
+
+        alarmManager.setRepeating(
             AlarmManager.RTC_WAKEUP,
-            nextAlarmTime,
+            System.currentTimeMillis(),
+            TWENTY_MINUTES,
             pIntent2
         )
 
@@ -47,7 +50,6 @@ class IntervalReceiver : BroadcastReceiver() {
         }else{
             context.startService(serviceIntent)
         }
-
     }
 
     companion object {

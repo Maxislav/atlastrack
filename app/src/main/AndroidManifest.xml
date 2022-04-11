@@ -1,14 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.mars.atlastrack">
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+
+
+    <!-- Satellite and network location services -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- allow this to run as a foreground service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission
+        android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
 <!--    <uses-permission android:name="android.permission.READ_PHONE_STATE"/>-->
     <application
         android:allowBackup="true"
@@ -36,10 +45,12 @@
             <intent-filter>
 
 
-                <action android:name="com.mars.atlastrack.action.INTERVAL_ACTION" />
-                <action android:name="android.intent.action.MANAGE_NETWORK_USAGE" />
+               <!-- <action android:name="com.mars.atlastrack.action.INTERVAL_ACTION" />
+                <action android:name="android.intent.action.MANAGE_NETWORK_USAGE" />-->
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.ACTION_BATTERY_OKAY" />
+<!--                <action android:name="android.intent.action.ACTION_DREAMING_STOPPED" />-->
+                <action android:name="com.mars.atlastrack.action.WAKE_UP_ACTION" />
+              <!--  <action android:name="android.intent.action.ACTION_BATTERY_OKAY" />-->
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>

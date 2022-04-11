@@ -6,8 +6,9 @@ import android.location.Location
 import android.os.Build
 import android.os.PowerManager
 import androidx.core.content.edit
+import java.util.*
 
-fun Location?.toText():String {
+fun Location?.toText(): String {
     return if (this != null) {
         "($latitude, $longitude)"
     } else {
@@ -24,7 +25,9 @@ internal object SharedPreferenceUtil {
 
     const val TWO_MINUTES = (60 * 1000 * 2).toLong()
     const val TEN_SECONDS = (10 * 1000).toLong()
-    const val TWENTY_MINUTES = 60 * 1000 * 20
+    const val TWENTY_MINUTES = (60 * 1000 * 20).toLong()
+
+    const val date = ""
 
     /**
      * Returns true if requesting location updates, otherwise returns false.
@@ -33,7 +36,8 @@ internal object SharedPreferenceUtil {
      */
     fun getLocationTrackingPref(context: Context): Boolean =
         context.getSharedPreferences(
-            context.getString(R.string.preference_file_key), Context.MODE_PRIVATE)
+            context.getString(R.string.preference_file_key), Context.MODE_PRIVATE
+        )
             .getBoolean(KEY_FOREGROUND_ENABLED, false)
 
     /**
@@ -43,7 +47,8 @@ internal object SharedPreferenceUtil {
     fun saveLocationTrackingPref(context: Context, requestingLocationUpdates: Boolean) =
         context.getSharedPreferences(
             context.getString(R.string.preference_file_key),
-            Context.MODE_PRIVATE).edit {
+            Context.MODE_PRIVATE
+        ).edit {
             putBoolean(KEY_FOREGROUND_ENABLED, requestingLocationUpdates)
         }
 
@@ -53,7 +58,20 @@ internal object SharedPreferenceUtil {
                 !powerManager.isIgnoringBatteryOptimizations(context.packageName)
     }
 
+    fun saveSharedDate(context: Context, date: Long): Unit{
+        val sharedPreferences = context.getSharedPreferences("DATA", Context.MODE_PRIVATE)
+        date.toString()
+        sharedPreferences.edit().putString("READ_PATH", date.toString()).apply()
+    }
 
+    fun getSharedDate(context: Context): Date? {
+        val sharedPreferences = context.getSharedPreferences("DATA", Context.MODE_PRIVATE)
+        val dateString =  sharedPreferences.getString("date", null)
+        if(dateString!==null){
+            return Date(dateString.toLong())
+        }
+        return null
+    }
 
 
 }

@@ -106,8 +106,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             PendingIntent.FLAG_CANCEL_CURRENT
         )
         // alarmManager.cancel(pi)
-        val time = System.currentTimeMillis() + 1000*1*20;
-        alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, time, pi)
+        val time = System.currentTimeMillis() + 1000*1*5;
+        alarmManager.setExact(AlarmManager.RTC_WAKEUP, time, pi)
     }
 
     private fun requestLocationPermission() {

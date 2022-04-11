@@ -23,6 +23,7 @@ import androidx.work.*
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import com.mars.atlastrack.SharedPreferenceUtil.isDozing
+import com.mars.atlastrack.WakeUp.Companion.WAKE_UP_ACTION
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -37,7 +38,7 @@ class LocationService : Service() {
     private var startServicetime: Long = 0
     private var wakeLock: PowerManager.WakeLock? = null
     private lateinit var batLevel: Number
-    private lateinit var batteryReceiver: BatteryReceiver
+    private var batteryReceiver: BatteryReceiver? = null
     private var emergencyHandler: Handler? = null
     private var timerForNetHandler: Handler? = null
     private val localBinder = LocalBinder()
@@ -56,6 +57,9 @@ class LocationService : Service() {
         notificationStart("Location update")
         startServicetime = System.currentTimeMillis()
         startEmergencyTimeout()
+        setupNextAlarm()
+
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             try {
                 defineGsmCell()
@@ -79,12 +83,14 @@ class LocationService : Service() {
                 "atlas.track:wakelock"
             )
             wakeLock?.acquire(2 * 60 * 1000L /*10 minutes*/)
-            batteryReceiver = BatteryReceiver(fun(level: Number) {
+            batteryReceiver = BatteryReceiver { level ->
                 batLevel = level
                 Log.d(TAG, "bat level ${batLevel}")
-                unregisterReceiver(batteryReceiver);
+                batteryReceiver?.let {
+                    unregisterReceiver(it);
+                }
                 startLocationListeners()
-            })
+            }
             registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         }
         return START_STICKY
@@ -123,7 +129,7 @@ class LocationService : Service() {
         locationManagerGps?.let {
 
             Log.d(TAG, "locationManagerGps")
-            if (gpsListener != null){
+            if (gpsListener != null) {
                 it.requestLocationUpdates(
                     LocationManager.GPS_PROVIDER,
                     10000,
@@ -155,8 +161,6 @@ class LocationService : Service() {
         gpsListener?.let {
             locationManagerGps?.removeUpdates(it)
         }
-
-
 
         if (wakeLock != null && wakeLock!!.isHeld) {
             wakeLock?.release()
@@ -352,7 +356,7 @@ class LocationService : Service() {
             .setContentTitle(getString(R.string.app_name))
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_SECRET)
-            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
             .setContentText("Location update...")
@@ -363,7 +367,9 @@ class LocationService : Service() {
 
     private fun setupNextAlarm(): Unit {
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager;
-        val alarmIntent = Intent(this, IntervalReceiver::class.java)
+        val alarmIntent = Intent(this, WakeUp::class.java)
+        alarmIntent.action = WAKE_UP_ACTION
+        // val alarmIntent.
         val time = System.currentTimeMillis() + TWENTY_MINUTES;
 
         /* val serviceIntent = Intent(this, LocationService::class.java)
