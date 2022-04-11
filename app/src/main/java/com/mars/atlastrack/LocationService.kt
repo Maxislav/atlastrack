@@ -330,7 +330,7 @@ class LocationService : Service() {
     private fun notificationStart(messagee: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val serviceChannel = NotificationChannel(
-                "CHANNEL_ID",
+                "NOTIFICATION_CHANNEL_ID",
                 "Location Service Channel",
                 NotificationManager.IMPORTANCE_DEFAULT
             )
@@ -348,7 +348,7 @@ class LocationService : Service() {
             cancelIntent, PendingIntent.FLAG_CANCEL_CURRENT
         )
 
-        val nfc = NotificationCompat.Builder(this, "CHANNEL_ID")
+        val nfc = NotificationCompat.Builder(this, "NOTIFICATION_CHANNEL_ID")
             .setContentTitle(getString(R.string.app_name))
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_SECRET)
