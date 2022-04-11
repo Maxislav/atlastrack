@@ -5,10 +5,9 @@ import android.location.Location
 import androidx.work.Data
 import androidx.work.Worker
 import androidx.work.WorkerParameters
-import java.util.concurrent.CompletableFuture
 
 
-class LocationWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, params), Callback {
+class SendWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, params), Callback {
     val context = ctx
     var end = false
     override fun doWork(): Result {

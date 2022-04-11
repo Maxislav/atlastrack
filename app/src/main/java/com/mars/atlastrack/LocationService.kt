@@ -5,7 +5,6 @@ import android.app.*
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
@@ -22,7 +21,6 @@ import androidx.lifecycle.Observer
 import androidx.work.*
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
-import com.mars.atlastrack.SharedPreferenceUtil.isDozing
 import com.mars.atlastrack.WakeUp.Companion.WAKE_UP_ACTION
 import java.text.DateFormat
 import java.text.SimpleDateFormat
@@ -78,20 +76,18 @@ class LocationService : Service() {
                 LocationManager.GPS_PROVIDER
             )
         ) {
-            wakeLock = powerManager.newWakeLock(
+            powerManager.newWakeLock(
+                //  PowerManager.PARTIAL_WAKE_LOCK,  // PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
                 PowerManager.PARTIAL_WAKE_LOCK,  // PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
                 "atlas.track:wakelock"
-            )
+            ).also { wakeLock = it }
             wakeLock?.acquire(2 * 60 * 1000L /*10 minutes*/)
-            batteryReceiver = BatteryReceiver { level ->
+            val app: ATApplication  =  applicationContext as ATApplication
+            app.registerReceiver { level ->
                 batLevel = level
-                Log.d(TAG, "bat level ${batLevel}")
-                batteryReceiver?.let {
-                    unregisterReceiver(it);
-                }
+                app.unregisterReceiver()
                 startLocationListeners()
             }
-            registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         }
         return START_STICKY
     }
@@ -293,7 +289,7 @@ class LocationService : Service() {
         val networkConstraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
-        val uploadTask = OneTimeWorkRequestBuilder<LocationWorker>()
+        val uploadTask = OneTimeWorkRequestBuilder<SendWorker>()
             .setConstraints(networkConstraints)
             .setInputData(data.build())
             .build()
@@ -334,7 +330,7 @@ class LocationService : Service() {
     private fun notificationStart(messagee: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val serviceChannel = NotificationChannel(
-                "CHANNEL_IDDD",
+                "CHANNEL_ID",
                 "Location Service Channel",
                 NotificationManager.IMPORTANCE_DEFAULT
             )
@@ -345,14 +341,14 @@ class LocationService : Service() {
             serviceChannel.enableLights(false)
             manager.createNotificationChannel(serviceChannel)
         }
-        val cancelIntent = Intent("CHANNEL_ID")
+        val cancelIntent = Intent("CANCEL_ID")
 
         val pendingIntent = PendingIntent.getBroadcast(
             this, 0,
             cancelIntent, PendingIntent.FLAG_CANCEL_CURRENT
         )
 
-        val nfc = NotificationCompat.Builder(this, "CHANNEL_IDDD")
+        val nfc = NotificationCompat.Builder(this, "CHANNEL_ID")
             .setContentTitle(getString(R.string.app_name))
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_SECRET)
@@ -369,16 +365,7 @@ class LocationService : Service() {
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager;
         val alarmIntent = Intent(this, WakeUp::class.java)
         alarmIntent.action = WAKE_UP_ACTION
-        // val alarmIntent.
         val time = System.currentTimeMillis() + TWENTY_MINUTES;
-
-        /* val serviceIntent = Intent(this, LocationService::class.java)
-         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-             startForegroundService(serviceIntent)
-         }else{
-             startService(serviceIntent)
-         }*/
-
         val pi = PendingIntent.getBroadcast(
             this,
             0,
@@ -390,16 +377,6 @@ class LocationService : Service() {
             time,
             pi
         )
-        /*if (isDozing(this)) {
-
-        } else {
-            alarmManager.set(
-                AlarmManager.RTC_WAKEUP,
-                time,
-                pi
-            )
-        }*/
-
     }
 
     @RequiresApi(Build.VERSION_CODES.R)

@@ -9,12 +9,15 @@ import android.os.Build
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat.getSystemService
+import androidx.work.*
 import com.mars.atlastrack.IntervalReceiver.Companion.INTERVAL_ACTION
 import com.mars.atlastrack.SharedPreferenceUtil.isDozing
+import kotlinx.coroutines.delay
 import java.lang.Error
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 
 class WakeUp : BroadcastReceiver() {
@@ -28,6 +31,30 @@ class WakeUp : BroadcastReceiver() {
         val dateFormat: DateFormat = SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH)
         val strDate: String = dateFormat.format(currentTime)
         Log.d(TAG, "WakeUp ${strDate}")
+        if(intent?.action === "android.intent.action.DREAMING_STOPPED"){
+           // start()
+            startWorker(context)
+        }else{
+            startWorker(context)
+         //   start()
+        }
+    }
+
+    private fun startWorker(context: Context){
+        val workManager = WorkManager.getInstance(context)
+        val networkConstraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+        val myWorker = PeriodicWorkRequestBuilder<PeriodWorker>(20, TimeUnit.MINUTES)
+            .setConstraints(networkConstraints)
+            .build()
+
+        workManager.enqueue(
+            myWorker
+        )
+    }
+
+    private fun start(){
         val isStarted = startService()
         if (!isStarted) {
             alarmManager =
@@ -52,7 +79,6 @@ class WakeUp : BroadcastReceiver() {
             Thread.sleep(10 * 1000)
         }
         t.start()
-
     }
 
     private fun startService(): Boolean {
@@ -71,6 +97,15 @@ class WakeUp : BroadcastReceiver() {
         }
         return isOk
     }
+
+    inner class ImageDownloadWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, params) {
+        override  fun doWork(): Result {
+            startService()
+            Thread.sleep(10000)
+            return  Result.success()
+        }
+    }
+
 
     companion object {
         private const val PACKAGE_NAME = "com.mars.atlastrack"

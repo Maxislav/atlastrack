@@ -8,10 +8,6 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
 import android.os.IBinder
-import android.telephony.CellIdentityLte
-import android.telephony.CellInfo
-import android.telephony.CellInfoLte
-import android.telephony.TelephonyManager
 import android.util.Log
 import android.view.WindowManager
 import android.widget.Button
@@ -106,8 +102,23 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             PendingIntent.FLAG_CANCEL_CURRENT
         )
         // alarmManager.cancel(pi)
-        val time = System.currentTimeMillis() + 1000*1*5;
+        val time = System.currentTimeMillis();
         alarmManager.setExact(AlarmManager.RTC_WAKEUP, time, pi)
+
+        val app  = applicationContext as ATApplication
+        app.registerDreamingStop()
+
+       /* val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent) {
+                Log.d(TAG, "received broacast intent: $intent")
+                if (intent.action == Intent.ACTION_DREAMING_STOPPED) {
+                    Log.d(TAG, "received dream stopped")
+                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, time, pi)
+                }
+            }
+        }
+        val filter = IntentFilter("android.intent.action.DREAMING_STOPPED");
+        super.registerReceiver(receiver, filter);*/
     }
 
     private fun requestLocationPermission() {
