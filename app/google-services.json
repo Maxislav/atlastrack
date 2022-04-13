@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "731638739237",
+    "project_id": "check-location-63ba0",
+    "storage_bucket": "check-location-63ba0.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:731638739237:android:eafc46d046ee9f3cceaacc",
+        "android_client_info": {
+          "package_name": "com.mars.atlastrack"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "731638739237-5ju2jdi3i79id6jgc0q5hhsnso1to097.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAMYEuL8aKZ1HSeYGK3lj7LHS3miK1qjlE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "731638739237-5ju2jdi3i79id6jgc0q5hhsnso1to097.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

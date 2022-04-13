@@ -57,16 +57,17 @@ internal object SharedPreferenceUtil {
         return powerManager.isDeviceIdleMode &&
                 !powerManager.isIgnoringBatteryOptimizations(context.packageName)
     }
-
+    @Synchronized
     fun saveSharedDate(context: Context, date: Long): Unit{
         val sharedPreferences = context.getSharedPreferences("DATA", Context.MODE_PRIVATE)
         date.toString()
         sharedPreferences.edit().putString("READ_PATH", date.toString()).apply()
     }
 
+    @Synchronized
     fun getSharedDate(context: Context): Date? {
         val sharedPreferences = context.getSharedPreferences("DATA", Context.MODE_PRIVATE)
-        val dateString =  sharedPreferences.getString("date", null)
+        val dateString =  sharedPreferences.getString("READ_PATH", null)
         if(dateString!==null){
             return Date(dateString.toLong())
         }

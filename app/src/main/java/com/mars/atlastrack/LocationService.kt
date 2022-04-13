@@ -55,7 +55,7 @@ class LocationService : Service() {
         notificationStart("Location update")
         startServicetime = System.currentTimeMillis()
         startEmergencyTimeout()
-        setupNextAlarm()
+        // setupNextAlarm()
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

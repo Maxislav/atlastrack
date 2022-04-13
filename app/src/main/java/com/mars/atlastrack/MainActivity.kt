@@ -16,6 +16,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.work.WorkManager
+import com.google.android.gms.tasks.OnCompleteListener
+import com.google.firebase.iid.FirebaseInstanceId
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.messaging.ktx.messaging
 import com.mars.atlastrack.WakeUp.Companion.WAKE_UP_ACTION
 
 
@@ -50,7 +55,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             requestLocationPermission()
             return
         }
-
+        //todo
         startBackgroundProcess();
 
         val vv = findViewById<TextView>(R.id.tv_device_id)
@@ -88,6 +93,30 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                 }
             }
         }
+
+        FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                Log.w(TAG, "Fetching FCM registration token failed", task.exception)
+                return@OnCompleteListener
+            }
+            // token ->  dgIhqpmeTTOrdQuI0eAhEa:APA91bG5-yFL7ZGQtJPxQ32Ds9nkdo8ZoVYWWaFZXc3YsH17ybGUiu1gvR9VwrmyMsyuQvcDodPz8XVQwQfnURt8_1cQ7gbYGwWcy-NCfUFi1I_qiBQHOHewy2krNmBCzBMEUbliRDLJ
+            // fNKuo15hRf2qhb8EsLMmqs:APA91bGmQox17E0TBMXNoOOk2fU7XvgUDB76JARDrmz7kAgOzIH99YM8CSedSvVveVb6OqG6m-kjUJ_moYtvL83f6PFlWdl8KHeoaCcRyNqQupnDqUaXtsJr3O9fEYST06qcILuy6wFY
+            // fNKuo15hRf2qhb8EsLMmqs:APA91bGmQox17E0TBMXNoOOk2fU7XvgUDB76JARDrmz7kAgOzIH99YM8CSedSvVveVb6OqG6m-kjUJ_moYtvL83f6PFlWdl8KHeoaCcRyNqQupnDqUaXtsJr3O9fEYST06qcILuy6wFY
+            val token = task.result
+            console.log("Token: ${task.result}")
+
+            // Log and toast
+           //  val msg = getString(R.string.msg_token_fmt, token)
+            // Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+        })
+
+        Firebase.messaging.subscribeToTopic("weather")
+            .addOnCompleteListener { task ->
+                // var msg = getString(R.string.msg_subscribed)
+
+                Log.d(TAG, "")
+               //  Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+            }
     }
 
     private fun startBackgroundProcess() {
@@ -137,7 +166,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         grantResults: IntArray
     ) {
         if (grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
-            startBackgroundProcess()
+             startBackgroundProcess()
         }
     }
 
@@ -224,6 +253,12 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                 // ogResultsToScreen("Foreground location: ${location.toText()}")
                 logResultsToScreen(location)
             }
+        }
+    }
+    internal object console {
+        val TAG = "TAG_MainActivity"
+        fun log(message: String) {
+            Log.d(TAG, message)
         }
     }
 }
