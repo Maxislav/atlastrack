@@ -44,9 +44,50 @@ class LocationService : Service() {
     private var locationManagerGps: LocationManager? = null
     private val TAG = "LocationService"
 
+    private var serviceLooper: Looper? = null
+    private var serviceHandler: ServiceHandler? = null
+
+   /* private var handler  = object : Handler(Looper.getMainLooper()) {
+        override fun handleMessage(msg: Message) {
+            when (msg.what) {
+                0 -> {
+                    onInit()
+                }
+            }
+        }
+    }*/
+
+    // Handler that receives messages from the thread
+    private inner class ServiceHandler(looper: Looper) : Handler(looper) {
+
+        override fun handleMessage(msg: Message) {
+            // Normally we would do some work here, like download a file.
+            // For our sample, we just sleep for 5 seconds.
+            setupNextAlarm()
+
+            try {
+                Thread.sleep(5000)
+            } catch (e: InterruptedException) {
+                // Restore interrupt status.
+                Thread.currentThread().interrupt()
+            }
+        }
+    }
+
+    override fun onCreate() {
+        HandlerThread("ServiceStartArguments", Process.THREAD_PRIORITY_BACKGROUND).apply {
+            start()
+
+            // Get the HandlerThread's Looper and use it for our Handler
+            serviceLooper = looper
+            serviceHandler = ServiceHandler(looper)
+        }
+        super.onCreate()
+    }
+
     override fun onLowMemory() {
         super.onLowMemory()
-        // setupNextAlarm()
+        setupNextAlarm()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -55,7 +96,11 @@ class LocationService : Service() {
         notificationStart("Location update")
         startServicetime = System.currentTimeMillis()
         startEmergencyTimeout()
-        // setupNextAlarm()
+        serviceHandler?.obtainMessage()?.also { msg ->
+            msg.arg1 = startId
+            serviceHandler?.sendMessage(msg)
+        }
+
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -66,30 +111,41 @@ class LocationService : Service() {
             }
         };
 
-        val powerManager = applicationContext.getSystemService(POWER_SERVICE) as PowerManager
+
         val isNetProviderEnabled =
             (getSystemService(LOCATION_SERVICE) as LocationManager).isProviderEnabled(
                 LocationManager.NETWORK_PROVIDER
             )
-        isNetProviderEnabled
         if ((getSystemService(LOCATION_SERVICE) as LocationManager).isProviderEnabled(
                 LocationManager.GPS_PROVIDER
             )
         ) {
-            powerManager.newWakeLock(
-                //  PowerManager.PARTIAL_WAKE_LOCK,  // PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
-                PowerManager.PARTIAL_WAKE_LOCK,  // PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
-                "atlas.track:wakelock"
-            ).also { wakeLock = it }
-            wakeLock?.acquire(2 * 60 * 1000L /*10 minutes*/)
-            val app: ATApplication  =  applicationContext as ATApplication
-            app.registerReceiver { level ->
-                batLevel = level
-                app.unregisterReceiver()
-                startLocationListeners()
+            serviceHandler?.obtainMessage()?.also { msg ->
+                msg.arg1 = startId
+                serviceHandler?.sendMessage(msg)
             }
+            Thread.sleep(5000)
+            onInit()
         }
         return START_STICKY
+    }
+
+
+    private fun onInit() {
+
+       /* val powerManager = applicationContext.getSystemService(POWER_SERVICE) as PowerManager
+        powerManager.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,  // PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+            "atlas.track:wakelock"
+        ).also { wakeLock = it }
+        wakeLock?.acquire(2 * 60 * 1000L)*/
+
+        val app: ATApplication = applicationContext as ATApplication
+        app.registerReceiver { level ->
+            batLevel = level
+            app.unregisterReceiver()
+            startLocationListeners()
+        }
     }
 
     private fun startLocationListeners() {
@@ -147,7 +203,7 @@ class LocationService : Service() {
 
 
     override fun onDestroy() {
-        Log.d(TAG, "onDestroy()")
+        Log.d(TAG, "onDestroyed")
         emergencyHandler?.removeCallbacksAndMessages(null);
         timerForNetHandler?.removeCallbacksAndMessages(null);
 
@@ -161,6 +217,7 @@ class LocationService : Service() {
         if (wakeLock != null && wakeLock!!.isHeld) {
             wakeLock?.release()
         }
+        // handler.removeCallbacksAndMessages(null)
         super.onDestroy()
     }
 
@@ -362,21 +419,29 @@ class LocationService : Service() {
     }
 
     private fun setupNextAlarm(): Unit {
+
+
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager;
         val alarmIntent = Intent(this, WakeUp::class.java)
         alarmIntent.action = WAKE_UP_ACTION
         val time = System.currentTimeMillis() + TWENTY_MINUTES;
+
+        console.log("setup next alarm")
+        val dateFormat: DateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH)
+        val strDate: String = dateFormat.format(Date(time))
+        console.log("setup next alarm: ${strDate}")
         val pi = PendingIntent.getBroadcast(
             this,
             0,
             alarmIntent,
-            PendingIntent.FLAG_CANCEL_CURRENT
+            0, //PendingIntent.FLAG_CANCEL_CURRENT
         )
         alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
             time,
             pi
         )
+        Thread.sleep(2000)
     }
 
     @RequiresApi(Build.VERSION_CODES.R)

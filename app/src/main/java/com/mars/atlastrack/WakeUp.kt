@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat.getSystemService
 import androidx.work.*
 import com.mars.atlastrack.IntervalReceiver.Companion.INTERVAL_ACTION
+import com.mars.atlastrack.SharedPreferenceUtil.THIRTY_MINUTES
 import com.mars.atlastrack.SharedPreferenceUtil.isDozing
 import kotlinx.coroutines.delay
 import java.lang.Error
@@ -28,24 +29,30 @@ class WakeUp : BroadcastReceiver() {
 
         this.context = context
         val currentTime: Date = Calendar.getInstance().getTime()
-        val dateFormat: DateFormat = SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH)
+        val dateFormat: DateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH)
         val strDate: String = dateFormat.format(currentTime)
         Log.d(TAG, "WakeUp ${strDate}")
         if(intent?.action === "android.intent.action.DREAMING_STOPPED"){
            // start()
-            startWorker(context)
+            startService()
+            //startWorker(context)
+           // scheduleNextAlarm()
         }else{
-            startWorker(context)
+            startService()
+           //  startWorker(context)
+           // scheduleNextAlarm()
          //   start()
         }
     }
 
     private fun startWorker(context: Context){
         val workManager = WorkManager.getInstance(context)
+        workManager.cancelAllWorkByTag(WORKER_TAG)
         val networkConstraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
         val myWorker = PeriodicWorkRequestBuilder<PeriodWorker>(20, TimeUnit.MINUTES)
+            .addTag(WORKER_TAG)
             .setConstraints(networkConstraints)
             .build()
 
@@ -54,7 +61,7 @@ class WakeUp : BroadcastReceiver() {
         )
     }
 
-    private fun start(){
+    private fun scheduleNextAlarm(){
         val isStarted = startService()
         if (!isStarted) {
             alarmManager =
@@ -65,14 +72,12 @@ class WakeUp : BroadcastReceiver() {
                 context,
                 0,
                 alarmIntent,
-                PendingIntent.FLAG_CANCEL_CURRENT
+                0,
             )
-            val time = System.currentTimeMillis() + 1000 * 1 * 5
-            if (isDozing(context)) {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, time, pi)
-            } else {
-                alarmManager.setExact(AlarmManager.RTC_WAKEUP, time, pi)
-            }
+            val time = System.currentTimeMillis() + THIRTY_MINUTES
+
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, time, pi)
+
         }
 
         val t = Thread {
@@ -110,6 +115,7 @@ class WakeUp : BroadcastReceiver() {
     companion object {
         private const val PACKAGE_NAME = "com.mars.atlastrack"
         internal const val WAKE_UP_ACTION = "$PACKAGE_NAME.action.WAKE_UP_ACTION"
+        internal const val WORKER_TAG = "WIFIJOB1"
     }
 
 }

@@ -17,6 +17,7 @@ import androidx.core.app.ActivityCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.work.WorkManager
 import com.google.android.gms.tasks.OnCompleteListener
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.iid.FirebaseInstanceId
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.FirebaseMessaging
@@ -93,7 +94,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                 }
             }
         }
-
+        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true)
         FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
             if (!task.isSuccessful) {
                 Log.w(TAG, "Fetching FCM registration token failed", task.exception)
@@ -128,7 +129,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             this,
             0,
             alarmIntent,
-            PendingIntent.FLAG_CANCEL_CURRENT
+            0,//PendingIntent.FLAG_CANCEL_CURRENT
         )
         // alarmManager.cancel(pi)
         val time = System.currentTimeMillis();

@@ -26,6 +26,8 @@ internal object SharedPreferenceUtil {
     const val TWO_MINUTES = (60 * 1000 * 2).toLong()
     const val TEN_SECONDS = (10 * 1000).toLong()
     const val TWENTY_MINUTES = (60 * 1000 * 20).toLong()
+    const val THIRTY_MINUTES = (60 * 1000 * 30).toLong()
+    const val FIVE_MINUTES = (60 * 1000 * 5).toLong()
 
     const val date = ""
 

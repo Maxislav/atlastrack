@@ -21,7 +21,7 @@ class IntervalReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
          this.context = context
         val currentTime: Date = Calendar.getInstance().getTime()
-        val dateFormat: DateFormat = SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH)
+        val dateFormat: DateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH)
         val strDate: String = dateFormat.format(currentTime)
         Log.d(TAG, "onReceive ${strDate}")
         val serviceIntent = Intent(context, LocationService::class.java)
