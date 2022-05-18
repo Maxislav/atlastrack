@@ -1,7 +1,8 @@
-package com.mars.atlastrack
+package com.mars.atlastrack.rest
 
 import android.location.Location
 import android.util.Log
+import com.mars.atlastrack.BuildConfig
 import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.Callback
@@ -14,7 +15,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 
-class AtlasRest(val location: Location, batLevel: Number, date: String, time: String) :
+class AtlasLocationRest(val location: Location, batLevel: Number, date: String, time: String) :
     Callback<ResponseBody> {
     private val TAG = "AtlasRest"
     val retrofit: Retrofit = Retrofit.Builder()

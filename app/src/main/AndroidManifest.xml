@@ -51,7 +51,7 @@
                 <action android:name="android.intent.action.MANAGE_NETWORK_USAGE" />-->
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
 <!--                <action android:name="android.intent.action.ACTION_DREAMING_STOPPED" />-->
-                <action android:name="com.mars.atlastrack.action.WAKE_UP_ACTION" />
+<!--                <action android:name="com.mars.atlastrack.action.WAKE_UP_ACTION" />-->
               <!--  <action android:name="android.intent.action.ACTION_BATTERY_OKAY" />-->
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>

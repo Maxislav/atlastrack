@@ -1,20 +1,21 @@
 package com.mars.atlastrack
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.os.Build
 import android.util.Log
 import androidx.work.*
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import java.lang.Error
 import java.util.concurrent.TimeUnit
 
 class MyFirebaseMessagingService:  FirebaseMessagingService() {
+    var app: ATApplication? = null
     override fun onNewToken(token: String) {
-        // Log.d(TAG, "Refreshed token: $token")
         console.log("token: ${token}")
-        // If you want to send messages to this application instance or
-        // manage this apps subscriptions on the server side, send the
-        // FCM registration token to your app server.
-       //  sendRegistrationToServer(token)
     }
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         // ...
@@ -22,47 +23,43 @@ class MyFirebaseMessagingService:  FirebaseMessagingService() {
         // TODO(developer): Handle FCM messages here.
         // Not getting messages here? See why this may be: https://goo.gl/39bRNJ
        //  Log.d(TAG, "From: ${remoteMessage.from}")
-        console.log("Message body: ${remoteMessage.notification?.body}")
-       // startWorker(this)
-        // Check if message contains a data payload.
-        /*if (remoteMessage.data.isNotEmpty()) {
-            Log.d(TAG, "Message data payload: ${remoteMessage.data}")
-
-            if (*//* Check if data needs to be processed by long running job *//* true) {
-                // For long-running tasks (10 seconds or more) use WorkManager.
-                scheduleJob()
-            } else {
-                // Handle message within 10 seconds
-                handleNow()
+        console.log("Message body: ${remoteMessage.data["action"]}")
+        when(remoteMessage.data["action"]){
+            "location" -> {
+                startService(this)
             }
         }
+    }
 
-        // Check if message contains a notification payload.
-        remoteMessage.notification?.let {
-            Log.d(TAG, "Message Notification Body: ${it.body}")
+
+    private fun startService(context: Context): Boolean {
+        app = context.applicationContext as ATApplication
+        if(app?.serviceIsRunning == true){
+            return false
         }
-*/
-        // Also if you intend on generating your own notifications as a result of a received FCM
-        // message, here is where that should be initiated. See sendNotification method below.
-    }
-    private fun startWorker(context: Context){
-        val workManager = WorkManager.getInstance(context)
-        val networkConstraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-        val myWorker = OneTimeWorkRequestBuilder<PeriodWorker>()
-            .setConstraints(networkConstraints)
-            .build()
+        val serviceIntent = Intent(context, LocationService::class.java)
+        var isOk = true
+        isOk = try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent)
 
-        workManager.enqueue(
-            myWorker
-        )
+            } else {
+                context.startService(serviceIntent)
+            }
+            true
+        } catch (e: Error) {
+            false
+        }
+        return isOk
     }
+
+
     internal object console {
         val TAG = "MyFirebaseMessagingService"
         fun log(message: String) {
             Log.d(TAG, message)
         }
     }
+
 
 }

@@ -47,6 +47,8 @@ class LocationService : Service() {
     private var serviceLooper: Looper? = null
     private var serviceHandler: ServiceHandler? = null
 
+    val wakeUp: WakeUp = WakeUp()
+
    /* private var handler  = object : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
             when (msg.what) {
@@ -63,7 +65,13 @@ class LocationService : Service() {
         override fun handleMessage(msg: Message) {
             // Normally we would do some work here, like download a file.
             // For our sample, we just sleep for 5 seconds.
-            setupNextAlarm()
+            when(msg.what){
+                1 -> {
+                    console.log("ServiceHandler handleMessage")
+                    setupNextAlarm()
+                }
+            }
+
 
             try {
                 Thread.sleep(5000)
@@ -75,31 +83,41 @@ class LocationService : Service() {
     }
 
     override fun onCreate() {
-        HandlerThread("ServiceStartArguments", Process.THREAD_PRIORITY_BACKGROUND).apply {
-            start()
+        HandlerThread("ServiceStartArguments", Process.THREAD_PRIORITY_BACKGROUND).also {
+            it.start()
 
             // Get the HandlerThread's Looper and use it for our Handler
-            serviceLooper = looper
-            serviceHandler = ServiceHandler(looper)
+            serviceLooper = it.looper
+            serviceHandler = ServiceHandler(it.looper)
         }
         super.onCreate()
     }
 
+
+
     override fun onLowMemory() {
         super.onLowMemory()
+        console.log("low memory")
         setupNextAlarm()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand")
+        // wakeUp.scheduleNextAlarm(this)
         super.onStartCommand(intent, flags, startId)
+        val app: ATApplication = applicationContext as ATApplication
+
+        if(app.serviceIsRunning){
+            return START_STICKY
+        }
+        app.serviceIsRunning = true
         notificationStart("Location update")
         startServicetime = System.currentTimeMillis()
         startEmergencyTimeout()
         serviceHandler?.obtainMessage()?.also { msg ->
-            msg.arg1 = startId
-            serviceHandler?.sendMessage(msg)
+          //  serviceHandler?.sendEmptyMessage(1)
         }
+        // setupNextAlarm()
 
 
 
@@ -140,7 +158,10 @@ class LocationService : Service() {
         ).also { wakeLock = it }
         wakeLock?.acquire(2 * 60 * 1000L)*/
 
+
         val app: ATApplication = applicationContext as ATApplication
+
+
         app.registerReceiver { level ->
             batLevel = level
             app.unregisterReceiver()
@@ -204,6 +225,8 @@ class LocationService : Service() {
 
     override fun onDestroy() {
         Log.d(TAG, "onDestroyed")
+        val app: ATApplication = applicationContext as ATApplication
+        app.serviceIsRunning = false
         emergencyHandler?.removeCallbacksAndMessages(null);
         timerForNetHandler?.removeCallbacksAndMessages(null);
 
@@ -268,6 +291,7 @@ class LocationService : Service() {
 
             if (startServicetime + 30 * 1000 * 2 < t2) {
                 Log.d(TAG, "stopSelf from gps")
+                sendWithWorker(location, GPS) //
                 stopSelf()
             } else {
                 sendWithWorker(location, GPS)
@@ -436,7 +460,7 @@ class LocationService : Service() {
             alarmIntent,
             0, //PendingIntent.FLAG_CANCEL_CURRENT
         )
-        alarmManager.setExactAndAllowWhileIdle(
+        alarmManager.set(
             AlarmManager.RTC_WAKEUP,
             time,
             pi

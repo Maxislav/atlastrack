@@ -56,8 +56,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             requestLocationPermission()
             return
         }
-        //todo
-        startBackgroundProcess();
+        // todo
+        // startBackgroundProcess();
 
         val vv = findViewById<TextView>(R.id.tv_device_id)
         vv.text = (BuildConfig.DEVICE_ID)
@@ -123,17 +123,18 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private fun startBackgroundProcess() {
         alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager;
         val alarmIntent = Intent(this, WakeUp::class.java)
-        alarmIntent.action = WAKE_UP_ACTION
 
+        // alarmIntent.action = WAKE_UP_ACTION
+        alarmIntent.action = "${WAKE_UP_ACTION}-${System.currentTimeMillis()}"
         val pi = PendingIntent.getBroadcast(
             this,
             0,
             alarmIntent,
-            0,//PendingIntent.FLAG_CANCEL_CURRENT
+            0//PendingIntent.FLAG_ONE_SHOT
         )
         // alarmManager.cancel(pi)
         val time = System.currentTimeMillis();
-        alarmManager.setExact(AlarmManager.RTC_WAKEUP, time, pi)
+        alarmManager.set(AlarmManager.RTC_WAKEUP, time+1000, pi)
 
         val app  = applicationContext as ATApplication
         app.registerDreamingStop()

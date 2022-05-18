@@ -10,6 +10,7 @@ import android.content.IntentFilter
 import android.util.Log
 
 class ATApplication : Application() {
+    var serviceIsRunning = false
     var batteryReceiver: BatteryReceiver? = null
     var batteryReceiverRegistered = false
     var batLevel: Number = 0

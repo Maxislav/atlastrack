@@ -1,0 +1,3 @@
+run adb command
+
+C:\Users\Maksym_Lipatov\AppData\Local\Android\Sdk\platform-tools>a

@@ -1,16 +1,18 @@
 package com.mars.atlastrack
 
-import android.app.AlarmManager
-import android.app.PendingIntent
+import android.app.*
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat.getSystemService
 import androidx.work.*
 import com.mars.atlastrack.IntervalReceiver.Companion.INTERVAL_ACTION
+import com.mars.atlastrack.SharedPreferenceUtil.FIVE_MINUTES
 import com.mars.atlastrack.SharedPreferenceUtil.THIRTY_MINUTES
 import com.mars.atlastrack.SharedPreferenceUtil.isDozing
 import kotlinx.coroutines.delay
@@ -18,75 +20,93 @@ import java.lang.Error
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 
 class WakeUp : BroadcastReceiver() {
     private val TAG = "WakeUp"
+    var app: ATApplication? = null
     lateinit var alarmManager: AlarmManager
-    lateinit var context: Context
+    //lateinit var context: Context
+
+    // var latch: CountDownLatch? = null
     override fun onReceive(context: Context, intent: Intent?) {
 
-        this.context = context
+       // this.context = context
         val currentTime: Date = Calendar.getInstance().getTime()
         val dateFormat: DateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH)
         val strDate: String = dateFormat.format(currentTime)
         Log.d(TAG, "WakeUp ${strDate}")
-        if(intent?.action === "android.intent.action.DREAMING_STOPPED"){
-           // start()
-            startService()
-            //startWorker(context)
-           // scheduleNextAlarm()
-        }else{
-            startService()
-           //  startWorker(context)
-           // scheduleNextAlarm()
-         //   start()
-        }
+        // latch = CountDownLatch(1)
+        app = context.applicationContext as ATApplication
+        // notificationCreate()
+        startService(context)
+
     }
 
-    private fun startWorker(context: Context){
-        val workManager = WorkManager.getInstance(context)
-        workManager.cancelAllWorkByTag(WORKER_TAG)
-        val networkConstraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-        val myWorker = PeriodicWorkRequestBuilder<PeriodWorker>(20, TimeUnit.MINUTES)
-            .addTag(WORKER_TAG)
-            .setConstraints(networkConstraints)
-            .build()
-
-        workManager.enqueue(
-            myWorker
-        )
-    }
-
-    private fun scheduleNextAlarm(){
-        val isStarted = startService()
-        if (!isStarted) {
-            alarmManager =
-                context.getSystemService(AppCompatActivity.ALARM_SERVICE) as AlarmManager;
-            val alarmIntent = Intent(context, WakeUp::class.java)
-            alarmIntent.action = WAKE_UP_ACTION
-            val pi = PendingIntent.getBroadcast(
-                context,
-                0,
-                alarmIntent,
-                0,
+    private fun notificationCreate(context: Context){
+        val manager = context.getSystemService(NotificationManager::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val serviceChannel = NotificationChannel(
+                "NOTIFICATION_CHANNEL_ID",
+                "Location Service Channel",
+                NotificationManager.IMPORTANCE_DEFAULT
             )
-            val time = System.currentTimeMillis() + THIRTY_MINUTES
 
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, time, pi)
-
+            serviceChannel.description = "no sound";
+            serviceChannel.setShowBadge(true)
+            serviceChannel.setSound(null, null) //< ----ignore sound
+            serviceChannel.enableLights(false)
+            manager.createNotificationChannel(serviceChannel)
         }
+        val cancelIntent = Intent("CANCEL_ID")
 
-        val t = Thread {
-            Thread.sleep(10 * 1000)
-        }
-        t.start()
+        val pendingIntent = PendingIntent.getBroadcast(
+            context, 0,
+            cancelIntent, PendingIntent.FLAG_CANCEL_CURRENT
+        )
+
+        val nfc = NotificationCompat.Builder(context, "NOTIFICATION_CHANNEL_ID")
+            .setContentTitle(context.getString(R.string.app_name))
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_SECRET)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentIntent(pendingIntent)
+            .setContentText("Location update...")
+            .setOngoing(true)
+            .build()
+        manager.notify(2, nfc);
+        // startForeground(1, nfc)
     }
 
-    private fun startService(): Boolean {
+    fun scheduleNextAlarm(context: Context) {
+        alarmManager =
+            context.getSystemService(AppCompatActivity.ALARM_SERVICE) as AlarmManager;
+        val alarmIntent = Intent(context, WakeUp::class.java)
+        alarmIntent.action = "${WAKE_UP_ACTION}-${System.currentTimeMillis()}"
+        val pi = PendingIntent.getBroadcast(
+            context,
+            0,
+            alarmIntent,
+            PendingIntent.FLAG_ONE_SHOT
+        )
+        val time = System.currentTimeMillis() + FIVE_MINUTES
+
+        alarmManager.set(AlarmManager.RTC_WAKEUP, time, pi)
+
+        val dateFormat: DateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH)
+        val strDate: String = dateFormat.format(Date(time))
+        console.log("setup next alarm: ${strDate}")
+        Thread.sleep(5000)
+    }
+
+    private fun startService(context: Context): Boolean {
+        if(app?.serviceIsRunning == true){
+           return false
+        }
+
         val serviceIntent = Intent(context, LocationService::class.java)
         var isOk = true
         isOk = try {
@@ -100,22 +120,25 @@ class WakeUp : BroadcastReceiver() {
         } catch (e: Error) {
             false
         }
+
+        // Thread.sleep(10000)
+
         return isOk
     }
 
-    inner class ImageDownloadWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, params) {
-        override  fun doWork(): Result {
-            startService()
-            Thread.sleep(10000)
-            return  Result.success()
-        }
-    }
 
 
     companion object {
         private const val PACKAGE_NAME = "com.mars.atlastrack"
         internal const val WAKE_UP_ACTION = "$PACKAGE_NAME.action.WAKE_UP_ACTION"
         internal const val WORKER_TAG = "WIFIJOB1"
+    }
+
+    internal object console {
+        val TAG = "WakeUp"
+        fun log(message: String) {
+            Log.d(TAG, message)
+        }
     }
 
 }
