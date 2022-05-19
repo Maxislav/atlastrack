@@ -126,4 +126,6 @@ class AtlasLocationRest(val location: Location, batLevel: Number, date: String, 
     override fun onFailure(call: Call<ResponseBody?>, t: Throwable) {
         Log.d(TAG, t.toString())
     }*/
+
+
 }

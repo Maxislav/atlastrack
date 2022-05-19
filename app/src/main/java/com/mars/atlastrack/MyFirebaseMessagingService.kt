@@ -23,7 +23,7 @@ class MyFirebaseMessagingService:  FirebaseMessagingService() {
         // TODO(developer): Handle FCM messages here.
         // Not getting messages here? See why this may be: https://goo.gl/39bRNJ
        //  Log.d(TAG, "From: ${remoteMessage.from}")
-        console.log("Message body: ${remoteMessage.data["action"]}")
+        console.log("Message action: ${remoteMessage.data["action"]} ${remoteMessage.data["date"]}")
         when(remoteMessage.data["action"]){
             "location" -> {
                 startService(this)

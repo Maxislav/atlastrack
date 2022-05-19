@@ -5,6 +5,8 @@ import android.app.*
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
@@ -21,6 +23,7 @@ import androidx.lifecycle.Observer
 import androidx.work.*
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import com.mars.atlastrack.SharedPreferenceUtil.isIdle
 import com.mars.atlastrack.WakeUp.Companion.WAKE_UP_ACTION
 import java.text.DateFormat
 import java.text.SimpleDateFormat
@@ -42,22 +45,21 @@ class LocationService : Service() {
     private val localBinder = LocalBinder()
     private var locationManagerNet: LocationManager? = null
     private var locationManagerGps: LocationManager? = null
-    private val TAG = "LocationService"
 
     private var serviceLooper: Looper? = null
     private var serviceHandler: ServiceHandler? = null
 
     val wakeUp: WakeUp = WakeUp()
 
-   /* private var handler  = object : Handler(Looper.getMainLooper()) {
-        override fun handleMessage(msg: Message) {
-            when (msg.what) {
-                0 -> {
-                    onInit()
-                }
-            }
-        }
-    }*/
+    /* private var handler  = object : Handler(Looper.getMainLooper()) {
+         override fun handleMessage(msg: Message) {
+             when (msg.what) {
+                 0 -> {
+                     onInit()
+                 }
+             }
+         }
+     }*/
 
     // Handler that receives messages from the thread
     private inner class ServiceHandler(looper: Looper) : Handler(looper) {
@@ -65,7 +67,7 @@ class LocationService : Service() {
         override fun handleMessage(msg: Message) {
             // Normally we would do some work here, like download a file.
             // For our sample, we just sleep for 5 seconds.
-            when(msg.what){
+            when (msg.what) {
                 1 -> {
                     console.log("ServiceHandler handleMessage")
                     setupNextAlarm()
@@ -94,7 +96,6 @@ class LocationService : Service() {
     }
 
 
-
     override fun onLowMemory() {
         super.onLowMemory()
         console.log("low memory")
@@ -102,30 +103,31 @@ class LocationService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d(TAG, "onStartCommand")
+        console.log("onStartCommand")
+        val isIdling = isIdle(applicationContext)
+        console.log("is idle -> ${isIdle(applicationContext)}")
         // wakeUp.scheduleNextAlarm(this)
         super.onStartCommand(intent, flags, startId)
         val app: ATApplication = applicationContext as ATApplication
 
-        if(app.serviceIsRunning){
+        if (app.serviceIsRunning) {
             return START_STICKY
         }
         app.serviceIsRunning = true
         notificationStart("Location update")
         startServicetime = System.currentTimeMillis()
-        startEmergencyTimeout()
+        startEmergencyTimeout(isIdling)
         serviceHandler?.obtainMessage()?.also { msg ->
-          //  serviceHandler?.sendEmptyMessage(1)
+            //  serviceHandler?.sendEmptyMessage(1)
         }
         // setupNextAlarm()
-
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             try {
                 defineGsmCell()
             } catch (e: Exception) {
-                Log.d(TAG, e.stackTraceToString())
+                console.log(e.stackTraceToString())
             }
         };
 
@@ -148,15 +150,27 @@ class LocationService : Service() {
         return START_STICKY
     }
 
-
-    private fun onInit() {
-
-       /* val powerManager = applicationContext.getSystemService(POWER_SERVICE) as PowerManager
+    private fun wakeScreen() {
+        val powerManager = applicationContext.getSystemService(POWER_SERVICE) as PowerManager
         powerManager.newWakeLock(
+            //PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
             PowerManager.PARTIAL_WAKE_LOCK,  // PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
             "atlas.track:wakelock"
         ).also { wakeLock = it }
-        wakeLock?.acquire(2 * 60 * 1000L)*/
+        wakeLock?.acquire(2 * 60 * 1000L)
+        wakeLock?.setReferenceCounted(true)
+        console.log("wakeScreen")
+    }
+
+
+    private fun onInit() {
+        wakeScreen()
+        /* val powerManager = applicationContext.getSystemService(POWER_SERVICE) as PowerManager
+         powerManager.newWakeLock(
+             PowerManager.PARTIAL_WAKE_LOCK,  // PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+             "atlas.track:wakelock"
+         ).also { wakeLock = it }
+         wakeLock?.acquire(2 * 60 * 1000L)*/
 
 
         val app: ATApplication = applicationContext as ATApplication
@@ -190,6 +204,8 @@ class LocationService : Service() {
 
         timeoutForNetLocation {
             if (locationManagerNet !== null && networkListener !== null) {
+
+                console.log("start location by network")
                 locationManagerNet?.requestLocationUpdates(
                     LocationManager.NETWORK_PROVIDER,
                     5000,
@@ -201,7 +217,7 @@ class LocationService : Service() {
 
         locationManagerGps?.let {
 
-            Log.d(TAG, "locationManagerGps")
+            console.log("locationManagerGps")
             if (gpsListener != null) {
                 it.requestLocationUpdates(
                     LocationManager.GPS_PROVIDER,
@@ -214,7 +230,7 @@ class LocationService : Service() {
 
 
         }
-        Log.d(TAG, "locationManagerGps ++")
+        console.log("locationManagerGps ++")
 
     }
 
@@ -224,7 +240,7 @@ class LocationService : Service() {
 
 
     override fun onDestroy() {
-        Log.d(TAG, "onDestroyed")
+        console.log("onDestroyed")
         val app: ATApplication = applicationContext as ATApplication
         app.serviceIsRunning = false
         emergencyHandler?.removeCallbacksAndMessages(null);
@@ -290,7 +306,7 @@ class LocationService : Service() {
             }
 
             if (startServicetime + 30 * 1000 * 2 < t2) {
-                Log.d(TAG, "stopSelf from gps")
+                console.log("stopSelf from gps")
                 sendWithWorker(location, GPS) //
                 stopSelf()
             } else {
@@ -319,11 +335,11 @@ class LocationService : Service() {
         }
 
         override fun onProviderEnabled(provider: String) {
-            Log.d(TAG, provider)
+            console.log(provider)
         }
 
         override fun onProviderDisabled(provider: String) {
-            Log.d(TAG, provider)
+            console.log(provider)
         }
 
         override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
@@ -343,14 +359,20 @@ class LocationService : Service() {
     }
 
 
-    private fun startEmergencyTimeout() {
+    private fun startEmergencyTimeout(isIdling: Boolean) {
         emergencyHandler = object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
+                console.log("stop self by timeout")
                 this@LocationService.stopSelf()
             }
         }
         val t = Thread {
-            Thread.sleep(30 * 1000)
+            if (isIdling) {
+                Thread.sleep(40 * 1000)
+            } else {
+                Thread.sleep(20 * 60 * 1000)
+            }
+
             emergencyHandler?.sendEmptyMessage(1)
         }
         t.start()
@@ -377,7 +399,7 @@ class LocationService : Service() {
         workManager.getWorkInfoByIdLiveData(uploadTask.id)
             .observeForever(Observer { workInfo: WorkInfo? ->
                 if (workInfo != null && workInfo.state.isFinished) {
-                    Log.d(TAG, "response ok ${workInfo.outputData.getString("body")}")
+                    console.log("response ok ${workInfo.outputData.getString("body")}")
                 }
             })
         workManager.enqueue(uploadTask)
@@ -413,13 +435,13 @@ class LocationService : Service() {
             val serviceChannel = NotificationChannel(
                 "NOTIFICATION_CHANNEL_ID",
                 "Location Service Channel",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH
             )
             val manager = getSystemService(NotificationManager::class.java)
             serviceChannel.description = "no sound";
             serviceChannel.setShowBadge(true)
             serviceChannel.setSound(null, null) //< ----ignore sound
-            serviceChannel.enableLights(false)
+            serviceChannel.enableLights(true)
             manager.createNotificationChannel(serviceChannel)
         }
         val cancelIntent = Intent("CANCEL_ID")
@@ -513,7 +535,7 @@ class LocationService : Service() {
 
             map.put("cellId", cellId)
 
-            Log.d(TAG, "->>  ${mcc} ${mnc} ${lac} ${cellId}")
+            console.log("->>  ${mcc} ${mnc} ${lac} ${cellId}")
 
             val f = JsonDataParser(mcc)
             val json = Gson()
@@ -530,7 +552,7 @@ class LocationService : Service() {
     )
 
     internal object console {
-        val TAG = "LocationService"
+        val TAG = "TAG_LocationService"
         fun log(message: String) {
             Log.d(TAG, message)
         }

@@ -54,6 +54,11 @@ internal object SharedPreferenceUtil {
             putBoolean(KEY_FOREGROUND_ENABLED, requestingLocationUpdates)
         }
 
+    fun isIdle(context: Context): Boolean{
+        val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        return pm.isDeviceIdleMode
+
+    }
     fun isDozing(context: Context): Boolean {
         val powerManager = context.getSystemService(Service.POWER_SERVICE) as PowerManager
         return powerManager.isDeviceIdleMode &&
