@@ -368,9 +368,9 @@ class LocationService : Service() {
         }
         val t = Thread {
             if (isIdling) {
-                Thread.sleep(40 * 1000)
+                Thread.sleep(30 * 60 * 1000)
             } else {
-                Thread.sleep(20 * 60 * 1000)
+                Thread.sleep(40 * 1000)
             }
 
             emergencyHandler?.sendEmptyMessage(1)

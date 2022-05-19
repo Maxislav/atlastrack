@@ -3,6 +3,7 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.google.firebase.crashlytics'
+apply plugin: 'kotlin-kapt'
 
 android {
     compileSdkVersion 30
@@ -14,6 +15,10 @@ android {
             storeFile file('D:\\Projects\\key_store\\my_key_store.jks')
             storePassword 'gliderman2'
         }
+    }
+    buildFeatures{
+        viewBinding true
+        dataBinding true
     }
 
     defaultConfig {

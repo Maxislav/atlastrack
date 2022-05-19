@@ -14,6 +14,7 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.databinding.ObservableField
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.work.WorkManager
 import com.google.android.gms.tasks.OnCompleteListener
@@ -23,10 +24,11 @@ import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.ktx.messaging
 import com.mars.atlastrack.WakeUp.Companion.WAKE_UP_ACTION
+import com.mars.atlastrack.databinding.ActivityMainBinding
 
 
 class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceChangeListener {
-
+    private lateinit var binding: ActivityMainBinding
     private var TAG: String = "TAG_MainActivity"
     private lateinit var myReceiver: MyReceiver
     private var foregroundOnlyLocationService: ForegroundOnlyLocationService? = null
@@ -40,27 +42,31 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     lateinit var alarmManager: AlarmManager
     private val workManager = WorkManager.getInstance(application)
 
+    public val deviceIdField = ObservableField<String>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        setSupportActionBar(findViewById(R.id.toolbar))
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        binding.mainActivity = this;
+        setContentView(binding.root)
+        // setSupportActionBar(findViewById(R.id.toolbar))
         myReceiver = MyReceiver()
-       // startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
 
         if (ActivityCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            Log.d(TAG, "no location permission")
+            console.log("no location permission")
             requestLocationPermission()
             return
         }
         // todo
         // startBackgroundProcess();
 
-        val vv = findViewById<TextView>(R.id.tv_device_id)
-        vv.text = (BuildConfig.DEVICE_ID)
+
+        deviceIdField.set(BuildConfig.DEVICE_ID)
+
         lngLatTextView = findViewById(R.id.lng_lat)
         accuracyTextView = findViewById(R.id.accuracy)
         buttonStartStop = findViewById(R.id.start_stop_button)
@@ -107,7 +113,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             console.log("Token: ${task.result}")
 
             // Log and toast
-           //  val msg = getString(R.string.msg_token_fmt, token)
+            //  val msg = getString(R.string.msg_token_fmt, token)
             // Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
         })
 
@@ -115,9 +121,13 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             .addOnCompleteListener { task ->
                 // var msg = getString(R.string.msg_subscribed)
 
-                Log.d(TAG, "")
-               //  Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+                console.log("")
+                //  Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
             }
+    }
+
+    fun saveDeviceId() {
+        deviceIdField.get()?.let { console.log("device id ->", it) }
     }
 
     private fun startBackgroundProcess() {
@@ -134,22 +144,11 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         )
         // alarmManager.cancel(pi)
         val time = System.currentTimeMillis();
-        alarmManager.set(AlarmManager.RTC_WAKEUP, time+1000, pi)
+        alarmManager.set(AlarmManager.RTC_WAKEUP, time + 1000, pi)
 
-        val app  = applicationContext as ATApplication
+        val app = applicationContext as ATApplication
         app.registerDreamingStop()
 
-       /* val receiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent) {
-                Log.d(TAG, "received broacast intent: $intent")
-                if (intent.action == Intent.ACTION_DREAMING_STOPPED) {
-                    Log.d(TAG, "received dream stopped")
-                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, time, pi)
-                }
-            }
-        }
-        val filter = IntentFilter("android.intent.action.DREAMING_STOPPED");
-        super.registerReceiver(receiver, filter);*/
     }
 
     private fun requestLocationPermission() {
@@ -168,7 +167,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         grantResults: IntArray
     ) {
         if (grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
-             startBackgroundProcess()
+            startBackgroundProcess()
         }
     }
 
@@ -183,7 +182,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             // foregroundOnlyLocationService?.unsubscribeToLocationUpdates()
             foregroundOnlyLocationService?.subscribeToLocationUpdates()
             bound = true
-            // ?: Log.d(TAG, "Service Not Bound")
+            // ?:console.log( "Service Not Bound")
         }
 
         override fun onServiceDisconnected(name: ComponentName) {
@@ -208,7 +207,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         if (provideRationale) {
 
         } else {
-            Log.d(TAG, "Request foreground only permission")
+            console.log("Request foreground only permission")
         }
     }
 
@@ -218,7 +217,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     override fun onResume() {
         super.onResume()
-        Log.d(TAG, "On resume main activity")
+        console.log("On resume main activity")
 
         LocalBroadcastManager.getInstance(this)
             .registerReceiver(
@@ -257,10 +256,11 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             }
         }
     }
+
     internal object console {
         val TAG = "TAG_MainActivity"
-        fun log(message: String) {
-            Log.d(TAG, message)
+        fun log(vararg message: String) {
+            Log.d(TAG, message.joinToString(separator = " ") { it })
         }
     }
 }
