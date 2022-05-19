@@ -16,15 +16,16 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.databinding.ObservableField
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import androidx.work.WorkManager
+import androidx.work.*
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.crashlytics.FirebaseCrashlytics
-import com.google.firebase.iid.FirebaseInstanceId
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.ktx.messaging
 import com.mars.atlastrack.WakeUp.Companion.WAKE_UP_ACTION
 import com.mars.atlastrack.databinding.ActivityMainBinding
+import com.mars.atlastrack.worker.FirebaseWorker
+import java.util.*
 
 
 class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceChangeListener {
@@ -35,6 +36,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private var bound: Boolean = false
 
     private lateinit var sharedPreferences: SharedPreferences
+    private lateinit var app: ATApplication
     lateinit var lngLatTextView: TextView
     lateinit var accuracyTextView: TextView
     lateinit var buttonStartStop: Button
@@ -46,9 +48,12 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         binding.mainActivity = this;
+
         setContentView(binding.root)
+        app = applicationContext as ATApplication
         // setSupportActionBar(findViewById(R.id.toolbar))
         myReceiver = MyReceiver()
 
@@ -64,8 +69,14 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         // todo
         // startBackgroundProcess();
 
+        /*if(app.deviceId == null){
+            val dateFormat: DateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH)
+            app.deviceId =
+        }*/
+        //val deviceId = applicationContext.deviceId ||
 
-        deviceIdField.set(BuildConfig.DEVICE_ID)
+        // deviceIdField.set(BuildConfig.DEVICE_ID)
+        deviceIdField.set(app.deviceId)
 
         lngLatTextView = findViewById(R.id.lng_lat)
         accuracyTextView = findViewById(R.id.accuracy)
@@ -111,10 +122,24 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             // fNKuo15hRf2qhb8EsLMmqs:APA91bGmQox17E0TBMXNoOOk2fU7XvgUDB76JARDrmz7kAgOzIH99YM8CSedSvVveVb6OqG6m-kjUJ_moYtvL83f6PFlWdl8KHeoaCcRyNqQupnDqUaXtsJr3O9fEYST06qcILuy6wFY
             val token = task.result
             console.log("Token: ${task.result}")
-
-            // Log and toast
-            //  val msg = getString(R.string.msg_token_fmt, token)
-            // Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+            val data = Data.Builder()
+            data.putString(FirebaseWorker.TOKEN, token)
+            data.putString(FirebaseWorker.DEVICE_ID, app.deviceId)
+            val workManager = WorkManager.getInstance(this)
+            val networkConstraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+            val uploadTask = OneTimeWorkRequestBuilder<FirebaseWorker>()
+                .setConstraints(networkConstraints)
+                .setInputData(data.build())
+                .build()
+            workManager.getWorkInfoByIdLiveData(uploadTask.id)
+                .observeForever { workInfo: WorkInfo? ->
+                    if (workInfo != null && workInfo.state.isFinished) {
+                        LocationService.console.log("response firebase sum ${workInfo.outputData.getString("body")}")
+                    }
+                }
+            workManager.enqueue(uploadTask)
         })
 
         Firebase.messaging.subscribeToTopic("weather")

@@ -15,7 +15,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 
-class AtlasLocationRest(val location: Location, batLevel: Number, date: String, time: String) :
+class AtlasLocationRest(val location: Location, batLevel: Number, date: String, time: String, deviceId: String) :
     Callback<ResponseBody> {
     private val TAG = "AtlasRest"
     val retrofit: Retrofit = Retrofit.Builder()
@@ -23,7 +23,7 @@ class AtlasLocationRest(val location: Location, batLevel: Number, date: String, 
         .build()
     val gprmc = createGprmc(location, date, time)
     val service = retrofit.create(WebService::class.java)
-    val onLog = service.log(BuildConfig.DEVICE_ID, gprmc, batLevel)
+    val onLog = service.log(deviceId, gprmc, batLevel)
 
     lateinit var callbackLocation: com.mars.atlastrack.Callback
 

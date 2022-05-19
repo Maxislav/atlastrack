@@ -1,10 +1,12 @@
-package com.mars.atlastrack
+package com.mars.atlastrack.worker
 
 import android.content.Context
 import android.location.Location
 import androidx.work.Data
 import androidx.work.Worker
 import androidx.work.WorkerParameters
+import com.mars.atlastrack.ATApplication
+import com.mars.atlastrack.Callback
 import com.mars.atlastrack.rest.AtlasLocationRest
 
 
@@ -24,8 +26,9 @@ class SendWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, params), 
         if(time === null){
             time = ""
         }
+        val app = context.applicationContext as ATApplication
 
-        val atlasRest = AtlasLocationRest(location, batt, date, time)
+        val atlasRest = AtlasLocationRest(location, batt, date, time, app.deviceId)
         val response =  atlasRest.execute()
         if(response.isSuccessful){
             val responseBody  = response.body()?.string()

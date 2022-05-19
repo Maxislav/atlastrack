@@ -8,12 +8,35 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+import java.util.*
 
 class ATApplication : Application() {
+
+    var deviceId: String
+        get() {
+            val sharedPreferences = this.getSharedPreferences("DATA", Context.MODE_PRIVATE)
+            var mDeviceId = sharedPreferences.getString("DEVICE_ID", null)
+            if (mDeviceId == null) {
+                // val dateFormat: DateFormat = SimpleDateFormat("00yyyyMMddHH", Locale.ENGLISH)
+                // deviceId = dateFormat.format(System.currentTimeMillis())
+                mDeviceId = BuildConfig.DEVICE_ID
+                sharedPreferences.edit().putString("DEVICE_ID", mDeviceId).apply()
+            }
+
+            return mDeviceId
+        }
+        set(value) {
+            val sharedPreferences = this.getSharedPreferences("DATA", Context.MODE_PRIVATE)
+            sharedPreferences.edit().putString("DEVICE_ID", value).apply()
+        }
+
     var serviceIsRunning = false
     var batteryReceiver: BatteryReceiver? = null
     var batteryReceiverRegistered = false
     var batLevel: Number = 0
+
 
     fun registerReceiver(callback: (level: Number) -> Unit) {
         if (batteryReceiverRegistered) {
@@ -28,17 +51,15 @@ class ATApplication : Application() {
     }
 
     fun unregisterReceiver() {
-
-        if(batteryReceiverRegistered){
+        if (batteryReceiverRegistered) {
             batteryReceiver?.let {
                 unregisterReceiver(it);
             }
         }
-
         batteryReceiverRegistered = false
     }
 
-    fun registerDreamingStop(){
+    fun registerDreamingStop() {
         val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager;
         val alarmIntent = Intent(this, WakeUp::class.java)
         val receiver = object : BroadcastReceiver() {

@@ -23,11 +23,12 @@ class FireBaseRest {
         fun request(
             @Query("id") id: String,
             @Query("token") token: String,
+            @Query("sum") sum: String,
         ): Call<ResponseBody>
     }
 
-    fun execute(token: String): Response<ResponseBody>{
-        return service.request(BuildConfig.DEVICE_ID, token).execute()
+    fun execute(deviceId: String, token: String, sum: String): Response<ResponseBody>{
+        return service.request(deviceId, token, sum).execute()
     }
 
     internal object console {

@@ -5,8 +5,6 @@ import android.app.*
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
-import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
@@ -25,6 +23,7 @@ import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import com.mars.atlastrack.SharedPreferenceUtil.isIdle
 import com.mars.atlastrack.WakeUp.Companion.WAKE_UP_ACTION
+import com.mars.atlastrack.worker.SendWorker
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
