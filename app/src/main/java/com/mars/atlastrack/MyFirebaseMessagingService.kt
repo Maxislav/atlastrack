@@ -4,11 +4,13 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter.SYSTEM_HIGH_PRIORITY
 import android.os.Build
 import android.util.Log
 import androidx.work.*
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.mars.atlastrack.service.HttpService
 import java.lang.Error
 import java.util.concurrent.TimeUnit
 
@@ -16,6 +18,9 @@ class MyFirebaseMessagingService:  FirebaseMessagingService() {
     var app: ATApplication? = null
     override fun onNewToken(token: String) {
         console.log("token: ${token}")
+        HttpService(this)
+            .saveToken(token)
+//        SYSTEM_HIGH_PRIORITY
     }
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         // ...

@@ -8,11 +8,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
-import java.text.DateFormat
-import java.text.SimpleDateFormat
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.messaging.ktx.messaging
 import java.util.*
 
 class ATApplication : Application() {
+
 
     var deviceId: String
         get() {

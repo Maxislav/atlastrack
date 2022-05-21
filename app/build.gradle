@@ -4,6 +4,7 @@ apply plugin: 'kotlin-android-extensions'
 apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.google.firebase.crashlytics'
 apply plugin: 'kotlin-kapt'
+apply plugin: 'com.google.gms.google-services'
 
 android {
     compileSdkVersion 30
@@ -99,12 +100,14 @@ dependencies {
     implementation 'androidx.work:work-runtime-ktx:2.7.1'
     implementation 'com.google.code.gson:gson:2.8.6'
     implementation platform('com.google.firebase:firebase-bom:29.3.0')
-    implementation 'com.google.firebase:firebase-messaging:23.0.2'
-    implementation 'com.google.firebase:firebase-core:20.1.2'
+    implementation 'com.google.firebase:firebase-messaging:23.0.4'
+    implementation 'com.google.firebase:firebase-core:21.0.0'
     implementation("com.google.firebase:firebase-iid")
 
-    implementation 'com.google.firebase:firebase-crashlytics-ktx:18.2.9'
-    implementation 'com.google.firebase:firebase-analytics-ktx:17.3.0'
+    implementation 'com.google.firebase:firebase-crashlytics-ktx:18.2.10'
+    implementation 'com.google.firebase:firebase-analytics-ktx:21.0.0'
+
+    implementation 'com.google.firebase:firebase-messaging-directboot:23.0.4'
 
 
 

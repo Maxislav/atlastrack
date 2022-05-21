@@ -19,6 +19,7 @@
     <uses-permission android:name="android.permission.SET_ALARM" />
     <uses-permission
         android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+<!--    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />-->
 <!--    <uses-permission android:name="android.permission.READ_PHONE_STATE"/>-->
     <application
         android:name=".ATApplication"
@@ -87,14 +88,20 @@
                 <action android:name="com.mars.atlastrack.LocationService" />
             </intent-filter>
         </service>
-        <service
-            android:name=".MyFirebaseInstanceIDService">
-            <intent-filter>
+        <!--<service
+            android:name=".MyFirebaseInstanceIDService"
+            android:exported="true"
+            android:directBootAware="true"
+            >
+            <intent-filter android:priority="1000">
                 <action android:name="com.google.firebase.INSTANCE_ID_EVENT"/>
             </intent-filter>
-        </service>
+        </service>-->
         <service
-            android:name=".MyFirebaseMessagingService">
+            android:name=".MyFirebaseMessagingService"
+            android:exported="false"
+
+            >
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT"/>
             </intent-filter>

@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -441,6 +442,8 @@ class LocationService : Service() {
             serviceChannel.setShowBadge(true)
             serviceChannel.setSound(null, null) //< ----ignore sound
             serviceChannel.enableLights(true)
+            serviceChannel.lightColor = 0xffff01
+            // serviceChannel.shouldShowLights()
             manager.createNotificationChannel(serviceChannel)
         }
         val cancelIntent = Intent("CANCEL_ID")
@@ -452,6 +455,7 @@ class LocationService : Service() {
 
         val nfc = NotificationCompat.Builder(this, "NOTIFICATION_CHANNEL_ID")
             .setContentTitle(getString(R.string.app_name))
+            .setLights(Color.BLUE, 200, 1000)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_SECRET)
             .setPriority(NotificationCompat.PRIORITY_MAX)
@@ -459,7 +463,10 @@ class LocationService : Service() {
             .setContentIntent(pendingIntent)
             .setContentText("Location update...")
             .setOngoing(true)
+
             .build()
+        // nfc.ledARGB = unchecked(-0xffff01)
+
         startForeground(1, nfc)
     }
 

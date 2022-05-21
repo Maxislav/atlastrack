@@ -47,6 +47,4 @@ class SendWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, params), 
     override fun onFailure() {
         end = true
     }
-
-
 }
