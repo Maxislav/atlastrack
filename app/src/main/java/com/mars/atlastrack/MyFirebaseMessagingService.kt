@@ -1,45 +1,51 @@
 package com.mars.atlastrack
 
-import android.app.AlarmManager
-import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter.SYSTEM_HIGH_PRIORITY
 import android.os.Build
 import android.util.Log
-import androidx.work.*
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.mars.atlastrack.service.HttpService
+import com.mars.atlastrack.service.HttpService.Companion.TOKEN
+import com.mars.atlastrack.service.LocationService
 import java.lang.Error
-import java.util.concurrent.TimeUnit
 
-class MyFirebaseMessagingService:  FirebaseMessagingService() {
+class MyFirebaseMessagingService : FirebaseMessagingService() {
     var app: ATApplication? = null
     override fun onNewToken(token: String) {
         console.log("token: ${token}")
-        HttpService(this)
-            .saveToken(token)
-//        SYSTEM_HIGH_PRIORITY
+        saveToken(token);
     }
+
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         // ...
 
         // TODO(developer): Handle FCM messages here.
         // Not getting messages here? See why this may be: https://goo.gl/39bRNJ
-       //  Log.d(TAG, "From: ${remoteMessage.from}")
+        //  Log.d(TAG, "From: ${remoteMessage.from}")
         console.log("Message action: ${remoteMessage.data["action"]} ${remoteMessage.data["date"]}")
-        when(remoteMessage.data["action"]){
+        when (remoteMessage.data["action"]) {
             "location" -> {
                 startService(this)
             }
         }
     }
 
+    private fun saveToken(token: String) {
+        val serviceIntent = Intent(this, HttpService::class.java)
+        serviceIntent.putExtra(TOKEN, token)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            this.startForegroundService(serviceIntent)
+        } else {
+            this.startService(serviceIntent)
+        }
+    }
+
 
     private fun startService(context: Context): Boolean {
         app = context.applicationContext as ATApplication
-        if(app?.serviceIsRunning == true){
+        if (app?.serviceIsRunning == true) {
             return false
         }
         val serviceIntent = Intent(context, LocationService::class.java)

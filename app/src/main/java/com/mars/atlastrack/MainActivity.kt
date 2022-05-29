@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.*
 import android.content.pm.PackageManager
 import android.location.Location
+import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
@@ -25,7 +26,9 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.ktx.messaging
 import com.mars.atlastrack.WakeUp.Companion.WAKE_UP_ACTION
 import com.mars.atlastrack.databinding.ActivityMainBinding
+import com.mars.atlastrack.service.AliveService
 import com.mars.atlastrack.service.HttpService
+import com.mars.atlastrack.service.LocationService
 import com.mars.atlastrack.worker.FirebaseWorker
 import java.util.*
 
@@ -125,8 +128,15 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             val token = task.result
             console.log("Token: ${task.result}")
 
-            HttpService(this)
-                .saveToken(token)
+            /*HttpService(this)
+                .saveToken(token)*/
+            val httpIntent = Intent(this, HttpService::class.java)
+            httpIntent.putExtra(HttpService.TOKEN, token)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                this.startForegroundService(httpIntent)
+            } else {
+                this.startService(httpIntent)
+            }
         })
 
         Firebase.messaging.subscribeToTopic("weather")
@@ -136,10 +146,22 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                 console.log("weather task")
                 //  Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
             }
+
+        startAliveService()
     }
 
     fun saveDeviceId() {
         deviceIdField.get()?.let { console.log("device id ->", it) }
+    }
+
+    private fun startAliveService(){
+        val serviceIntent = Intent(this, AliveService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent)
+
+        } else {
+            startService(serviceIntent)
+        }
     }
 
     private fun startBackgroundProcess() {

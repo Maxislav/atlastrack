@@ -69,6 +69,9 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
+        <service android:name=".service.AliveService">
+
+        </service>
 
         <service
             android:name=".ForegroundOnlyLocationService"
@@ -80,30 +83,31 @@
             </intent-filter>
         </service>
         <service
-            android:name=".LocationService"
+            android:name=".service.LocationService"
             android:enabled="true"
+
             android:foregroundServiceType="location"
             >
-            <intent-filter>
+            <intent-filter android:priority="1000">
                 <action android:name="com.mars.atlastrack.LocationService" />
             </intent-filter>
         </service>
-        <!--<service
-            android:name=".MyFirebaseInstanceIDService"
-            android:exported="true"
-            android:directBootAware="true"
-            >
-            <intent-filter android:priority="1000">
-                <action android:name="com.google.firebase.INSTANCE_ID_EVENT"/>
-            </intent-filter>
-        </service>-->
         <service
             android:name=".MyFirebaseMessagingService"
-            android:exported="false"
+            android:exported="true"
 
             >
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+            </intent-filter>
+        </service>
+        <service
+            android:name=".service.HttpService"
+            android:exported="false"
+
+            >
+            <intent-filter>
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </service>
         <!--<meta-data

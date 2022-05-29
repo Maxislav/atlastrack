@@ -1,4 +1,4 @@
-package com.mars.atlastrack
+package com.mars.atlastrack.service
 
 import android.Manifest
 import android.app.*
@@ -22,7 +22,10 @@ import androidx.lifecycle.Observer
 import androidx.work.*
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import com.mars.atlastrack.ATApplication
+import com.mars.atlastrack.R
 import com.mars.atlastrack.SharedPreferenceUtil.isIdle
+import com.mars.atlastrack.WakeUp
 import com.mars.atlastrack.WakeUp.Companion.WAKE_UP_ACTION
 import com.mars.atlastrack.worker.SendWorker
 import java.text.DateFormat

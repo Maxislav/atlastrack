@@ -8,8 +8,8 @@ import android.content.Context.ALARM_SERVICE
 import android.content.Intent
 import android.os.Build
 import android.util.Log
-import androidx.core.content.ContextCompat.getSystemService
 import com.mars.atlastrack.SharedPreferenceUtil.TWENTY_MINUTES
+import com.mars.atlastrack.service.LocationService
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*

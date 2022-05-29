@@ -3,25 +3,17 @@ package com.mars.atlastrack
 import android.app.*
 import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat.getSystemService
-import androidx.work.*
-import com.mars.atlastrack.IntervalReceiver.Companion.INTERVAL_ACTION
 import com.mars.atlastrack.SharedPreferenceUtil.FIVE_MINUTES
-import com.mars.atlastrack.SharedPreferenceUtil.THIRTY_MINUTES
-import com.mars.atlastrack.SharedPreferenceUtil.isDozing
-import kotlinx.coroutines.delay
+import com.mars.atlastrack.service.LocationService
 import java.lang.Error
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 
 class WakeUp : BroadcastReceiver() {
