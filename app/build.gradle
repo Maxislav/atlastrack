@@ -63,7 +63,22 @@ android {
             buildConfigField "String", "SERVER_BASE_PATH", "\"http://178.62.44.54:8080/\""
             buildConfigField "String", "DEVICE_ID", "\"000000000013\""
             buildConfigField "String", "BASE_URL", "\"http://localhost/\""
-
+            versionNameSuffix '-preprod'
+        }
+        myTest13 {
+            applicationId "com.mars.atlastrack"
+            dimension "version"
+            buildConfigField "String", "SERVER_BASE_PATH", "\"http://178.62.44.54:8080/\""
+            buildConfigField "String", "DEVICE_ID", "\"000000000013\""
+            buildConfigField "String", "BASE_URL", "\"http://178.62.44.54:8080/\""
+            versionNameSuffix '-preprod'
+        }
+        myTest14 {
+            applicationId "com.mars.atlastrack"
+            dimension "version"
+            buildConfigField "String", "SERVER_BASE_PATH", "\"http://178.62.44.54:8080/\""
+            buildConfigField "String", "DEVICE_ID", "\"000000000014\""
+            buildConfigField "String", "BASE_URL", "\"http://178.62.44.54:8080/\""
             versionNameSuffix '-preprod'
         }
         develop {

@@ -30,7 +30,7 @@ class AtlasLocationRest(val location: Location, batLevel: Number, date: String, 
 
     interface WebService {
         @GET("/log")
-        open fun log(
+        fun log(
             @Query("id") id: String,
             @Query("gprmc") gprmc: String,
             @Query("batt") batt: Number
@@ -51,8 +51,8 @@ class AtlasLocationRest(val location: Location, batLevel: Number, date: String, 
         sdf.timeZone = TimeZone.getTimeZone("UTC")
         val time: String = sdf.format(currentTime)
         val date = dateFormat.format(currentTime)
-        var latitude = locationToMinute(location.latitude)
-        var longitude = locationToMinute(location.longitude)
+        val latitude = locationToMinute(location.latitude)
+        val longitude = locationToMinute(location.longitude)
         return "\$GPRMC,${time},A,${latitude},${NS},${longitude},${WE},00,00,${date},,*${SUM}"
     }
 

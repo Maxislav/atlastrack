@@ -11,11 +11,11 @@ import retrofit2.http.Query
 
 class FireBaseRest {
 
-    val retrofit: Retrofit = Retrofit.Builder()
+    private val retrofit: Retrofit = Retrofit.Builder()
         .baseUrl(BuildConfig.SERVER_BASE_PATH) // .addConverterFactory(GsonConverterFactory.create())
         .build()
 
-    val service = retrofit.create(WebService::class.java)
+    val service: WebService = retrofit.create(WebService::class.java)
 
 
     interface WebService {

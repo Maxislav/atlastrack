@@ -82,7 +82,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         //val deviceId = applicationContext.deviceId ||
 
         // deviceIdField.set(BuildConfig.DEVICE_ID)
-        deviceIdField.set(app.deviceId)
+
+
+
+
 
         lngLatTextView = findViewById(R.id.lng_lat)
         accuracyTextView = findViewById(R.id.accuracy)
@@ -251,6 +254,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     override fun onResume() {
         super.onResume()
+        deviceIdField.set(app.deviceId)
+
         console.log("On resume main activity")
 
         LocalBroadcastManager.getInstance(this)
